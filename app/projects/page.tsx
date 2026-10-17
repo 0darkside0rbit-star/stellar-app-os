@@ -153,6 +153,13 @@ function ProjectsContent(): JSX.Element {
               standard, and co-benefits.
             </Text>
           </div>
+          <div className="flex items-center gap-2">
+            <Link href="/projects/compare">
+              <Button variant="outline" size="sm" className="text-xs">
+                Compare Tree Sponsorships ⚖
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Search Bar & Co-Benefit Quick Filters */}

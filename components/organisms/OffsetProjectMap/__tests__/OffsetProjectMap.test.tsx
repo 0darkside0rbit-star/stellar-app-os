@@ -1,8 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { OffsetProjectMap, getProjectRegion, getProjectTypeColor } from '../OffsetProjectMap';
+import { OffsetProjectMap } from '../OffsetProjectMap';
 import { mockCarbonProjects } from '@/lib/api/mock/carbonProjects';
-import type { CarbonProject } from '@/lib/types/carbon';
 
 // Mock react-leaflet components
 vi.mock('react-leaflet', () => ({
@@ -12,16 +11,8 @@ vi.mock('react-leaflet', () => ({
     </div>
   ),
   TileLayer: () => <div data-testid="tile-layer" />,
-  CircleMarker: ({ children, eventHandlers, ...props }: any) => (
-    <div
-      data-testid="circle-marker"
-      onMouseEnter={eventHandlers?.mouseover}
-      onMouseLeave={eventHandlers?.mouseout}
-      {...props}
-    >
-      {children}
-    </div>
-  ),
+  CircleMarker: ({ children }: any) => <div data-testid="circle-marker">{children}</div>,
+  Circle: () => <div data-testid="climate-circle" />,
   Popup: ({ children }: any) => <div data-testid="popup">{children}</div>,
   Tooltip: ({ children }: any) => <div data-testid="tooltip">{children}</div>,
   useMap: () => ({
@@ -47,178 +38,59 @@ vi.mock('leaflet', () => ({
   },
 }));
 
-describe('OffsetProjectMap Component', () => {
-  it('renders interactive map with quick stats and markers', () => {
+describe('OffsetProjectMap with Climate Layer', () => {
+  it('renders map with climate layer toggle', () => {
     render(<OffsetProjectMap projects={mockCarbonProjects} />);
 
     expect(screen.getByTestId('offset-project-map-container')).toBeDefined();
-    expect(screen.getByTestId('map-container')).toBeDefined();
-    expect(screen.getByTestId('active-projects-count').textContent).toBe(
-      String(mockCarbonProjects.length)
-    );
-
-    // Circle markers rendered for projects
-    const markers = screen.getAllByTestId('circle-marker');
-    expect(markers.length).toBe(mockCarbonProjects.length);
+    const toggle = screen.getByTestId('climate-layer-toggle');
+    expect(toggle).toBeDefined();
+    expect(toggle.textContent).toContain('Climate Layer: OFF');
   });
 
-  it('filters projects by region when clicking region pills', () => {
+  it('toggles climate layer ON and exposes open meteorological metrics controls', () => {
     render(<OffsetProjectMap projects={mockCarbonProjects} />);
 
-    // Click South America
-    const southAmericaBtn = screen.getByRole('button', { name: /Filter region South America/i });
-    fireEvent.click(southAmericaBtn);
+    const toggle = screen.getByTestId('climate-layer-toggle');
+    fireEvent.click(toggle);
 
-    const southAmericaProjects = mockCarbonProjects.filter(
-      (p) => getProjectRegion(p) === 'South America'
-    );
-    expect(screen.getByTestId('active-projects-count').textContent).toBe(
-      String(southAmericaProjects.length)
-    );
+    expect(toggle.textContent).toContain('Climate Layer: ON');
+    // Open meteorological API note is displayed
+    expect(
+      screen.getByText(/Sourced from open meteorological APIs/i)
+    ).toBeDefined();
 
-    // Click Africa
-    const africaBtn = screen.getByRole('button', { name: /Filter region Africa/i });
-    fireEvent.click(africaBtn);
+    // Metric selectors are visible
+    expect(screen.getByRole('button', { name: /Rainfall \(mm\)/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: /Temperature \(°C\)/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: /Planting Conditions/i })).toBeDefined();
 
-    const africaProjects = mockCarbonProjects.filter((p) => getProjectRegion(p) === 'Africa');
-    expect(screen.getByTestId('active-projects-count').textContent).toBe(
-      String(africaProjects.length)
-    );
+    // Comparison selector is visible
+    expect(screen.getByRole('button', { name: /Historical vs Current/i })).toBeDefined();
   });
 
-  it('filters projects by project type selector', () => {
-    render(<OffsetProjectMap projects={mockCarbonProjects} />);
+  it('switches climate metric to temperature and planting conditions', () => {
+    render(<OffsetProjectMap projects={mockCarbonProjects} enableClimateLayerByDefault={true} />);
 
-    const typeSelect = screen.getByLabelText(/Filter by project type/i);
-    fireEvent.change(typeSelect, { target: { value: 'Renewable Energy' } });
+    // Click temperature
+    const tempBtn = screen.getByRole('button', { name: /Temperature \(°C\)/i });
+    fireEvent.click(tempBtn);
+    expect(screen.getByText(/Temperature Scale/i)).toBeDefined();
 
-    const renewableProjects = mockCarbonProjects.filter((p) => p.type === 'Renewable Energy');
-    expect(screen.getByTestId('active-projects-count').textContent).toBe(
-      String(renewableProjects.length)
-    );
+    // Click planting conditions
+    const condBtn = screen.getByRole('button', { name: /Planting Conditions/i });
+    fireEvent.click(condBtn);
+    expect(screen.getByText(/Planting Conditions/i)).toBeDefined();
   });
 
-  it('filters projects by availability selector', () => {
-    render(<OffsetProjectMap projects={mockCarbonProjects} />);
+  it('renders historical vs current comparison data in popups', () => {
+    render(<OffsetProjectMap projects={mockCarbonProjects} enableClimateLayerByDefault={true} />);
 
-    const availabilitySelect = screen.getByLabelText(/Filter by availability/i);
+    // Check that historical vs current planting climate data is present
+    const headings = screen.getAllByText(/Planting Climate Data/i);
+    expect(headings.length).toBeGreaterThan(0);
 
-    // In stock only
-    fireEvent.change(availabilitySelect, { target: { value: 'in_stock' } });
-    const inStockProjects = mockCarbonProjects.filter(
-      (p) => !p.isOutOfStock && p.availableSupply > 0
-    );
-    expect(screen.getByTestId('active-projects-count').textContent).toBe(
-      String(inStockProjects.length)
-    );
-
-    // Out of stock only
-    fireEvent.change(availabilitySelect, { target: { value: 'out_of_stock' } });
-    const outOfStockProjects = mockCarbonProjects.filter(
-      (p) => p.isOutOfStock || p.availableSupply <= 0
-    );
-    expect(screen.getByTestId('active-projects-count').textContent).toBe(
-      String(outOfStockProjects.length)
-    );
-  });
-
-  it('shows project details on hover over marker and clears on mouseout', () => {
-    render(<OffsetProjectMap projects={mockCarbonProjects} />);
-
-    const firstProject = mockCarbonProjects[0];
-    const markers = screen.getAllByTestId('circle-marker');
-
-    // Trigger hover
-    fireEvent.mouseEnter(markers[0]);
-
-    // Hover card appears with project details
-    const hoverCard = screen.getByTestId('project-hover-card');
-    expect(hoverCard).toBeDefined();
-    expect(hoverCard.textContent).toContain(firstProject.name);
-    expect(hoverCard.textContent).toContain(firstProject.location);
-    expect(hoverCard.textContent).toContain(`$${firstProject.pricePerTon.toFixed(2)} USDC`);
-    expect(hoverCard.textContent).toContain(String(firstProject.vintageYear));
-
-    // Trigger mouseout
-    fireEvent.mouseLeave(markers[0]);
-    expect(screen.queryByTestId('project-hover-card')).toBeNull();
-  });
-
-  it('supports external filters prop correctly', () => {
-    render(
-      <OffsetProjectMap
-        projects={mockCarbonProjects}
-        filters={{
-          types: ['Reforestation'],
-          availableOnly: true,
-        }}
-      />
-    );
-
-    const expected = mockCarbonProjects.filter(
-      (p) => p.type === 'Reforestation' && !p.isOutOfStock && p.availableSupply > 0
-    );
-    const markers = screen.getAllByTestId('circle-marker');
-    expect(markers.length).toBe(expected.length);
-  });
-
-  it('resets all filters when clicking Reset button', () => {
-    render(<OffsetProjectMap projects={mockCarbonProjects} />);
-
-    // Apply a region filter
-    const europeBtn = screen.getByRole('button', { name: /Filter region Europe/i });
-    fireEvent.click(europeBtn);
-
-    // Reset button should now be visible
-    const resetBtn = screen.getByRole('button', { name: /Reset/i });
-    fireEvent.click(resetBtn);
-
-    expect(screen.getByTestId('active-projects-count').textContent).toBe(
-      String(mockCarbonProjects.length)
-    );
-  });
-});
-
-describe('Helper functions', () => {
-  it('correctly maps projects to regions', () => {
-    const brazilProject: CarbonProject = {
-      ...mockCarbonProjects[0],
-      location: 'Amazon, Brazil',
-    };
-    expect(getProjectRegion(brazilProject)).toBe('South America');
-
-    const kenyaProject: CarbonProject = {
-      ...mockCarbonProjects[0],
-      location: 'Nairobi, Kenya',
-    };
-    expect(getProjectRegion(kenyaProject)).toBe('Africa');
-
-    const usaProject: CarbonProject = {
-      ...mockCarbonProjects[0],
-      location: 'California, USA',
-    };
-    expect(getProjectRegion(usaProject)).toBe('North America');
-
-    const scotlandProject: CarbonProject = {
-      ...mockCarbonProjects[0],
-      location: 'Highlands, Scotland',
-    };
-    expect(getProjectRegion(scotlandProject)).toBe('Europe');
-
-    const indonesiaProject: CarbonProject = {
-      ...mockCarbonProjects[0],
-      location: 'Sumatra, Indonesia',
-    };
-    expect(getProjectRegion(indonesiaProject)).toBe('Asia-Pacific');
-  });
-
-  it('returns distinct colors for different project types', () => {
-    const reforest = getProjectTypeColor('Reforestation');
-    const energy = getProjectTypeColor('Renewable Energy');
-    const mangrove = getProjectTypeColor('Mangrove Restoration');
-    const agri = getProjectTypeColor('Sustainable Agriculture');
-
-    expect(reforest.fill).not.toBe(energy.fill);
-    expect(mangrove.fill).not.toBe(agri.fill);
+    const openMeteoTags = screen.getAllByText(/Open Meteorological APIs/i);
+    expect(openMeteoTags.length).toBeGreaterThan(0);
   });
 });

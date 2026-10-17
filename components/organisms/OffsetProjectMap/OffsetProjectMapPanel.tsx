@@ -71,16 +71,19 @@ export function OffsetProjectMapPanel({
     }));
   }, []);
 
+  const [climateLayerActive, setClimateLayerActive] = useState<boolean>(false);
+
   const toggleAvailableOnly = useCallback(() => {
     setFilters((prev) => ({ ...prev, availableOnly: !prev.availableOnly }));
   }, []);
 
   const resetFilters = useCallback(() => {
     setFilters({ types: [], regions: [], availableOnly: false });
+    setClimateLayerActive(false);
   }, []);
 
   const hasActiveFilters =
-    filters.types.length > 0 || filters.regions.length > 0 || filters.availableOnly;
+    filters.types.length > 0 || filters.regions.length > 0 || filters.availableOnly || climateLayerActive;
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -182,12 +185,30 @@ export function OffsetProjectMapPanel({
         >
           ✅ Available only
         </button>
+
+        {/* Climate Layer toggle */}
+        <button
+          type="button"
+          onClick={() => setClimateLayerActive((prev) => !prev)}
+          aria-pressed={climateLayerActive}
+          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
+            climateLayerActive
+              ? 'border-emerald-500 bg-emerald-600 text-white'
+              : 'border-border bg-background text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          🌦️ Climate Layer: {climateLayerActive ? 'ON' : 'OFF'}
+        </button>
       </div>
 
       {/* ── Map ─────────────────────────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-xl border border-stellar-blue/20 bg-muted/30">
         <div className="h-[420px] sm:h-[520px]">
-          <OffsetProjectMapClient projects={projects} filters={filters} />
+          <OffsetProjectMapClient
+            projects={projects}
+            filters={filters}
+            enableClimateLayerByDefault={climateLayerActive}
+          />
         </div>
       </div>
 

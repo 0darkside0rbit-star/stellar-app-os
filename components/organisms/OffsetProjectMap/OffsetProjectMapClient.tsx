@@ -19,12 +19,21 @@ export interface OffsetProjectMapClientProps {
   projects: CarbonProject[];
   filters: OffsetProjectMapFilters;
   className?: string;
+  enableClimateLayerByDefault?: boolean;
 }
 
 export function OffsetProjectMapClient({
   projects,
   filters,
   className,
+  enableClimateLayerByDefault,
 }: OffsetProjectMapClientProps) {
-  return <OffsetProjectMapInner projects={projects} filters={filters} className={className} />;
+  return (
+    <OffsetProjectMapInner
+      projects={projects}
+      filters={filters}
+      className={className}
+      enableClimateLayerByDefault={enableClimateLayerByDefault}
+    />
+  );
 }

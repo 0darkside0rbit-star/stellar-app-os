@@ -19,12 +19,7 @@ import { ClimateComparisonModal } from './ClimateComparisonModal';
 import 'leaflet/dist/leaflet.css';
 
 export type MapRegionFilter =
-  | 'All'
-  | 'Africa'
-  | 'South America'
-  | 'North America'
-  | 'Europe'
-  | 'Asia-Pacific';
+  'All' | 'Africa' | 'South America' | 'North America' | 'Europe' | 'Asia-Pacific';
 
 export type MapAvailabilityFilter = 'all' | 'in_stock' | 'out_of_stock';
 
@@ -39,7 +34,9 @@ export interface OffsetProjectMapProps {
   initialRegion?: MapRegionFilter;
   initialType?: string;
   initialAvailability?: MapAvailabilityFilter;
+  filters?: OffsetProjectMapFilters;
   height?: string;
+  className?: string;
   showFilters?: boolean;
   filters?: OffsetProjectMapFilters;
   className?: string;
@@ -56,7 +53,7 @@ const REGION_CENTERS: Record<MapRegionFilter, { center: [number, number]; zoom: 
   'Asia-Pacific': { center: [10, 105], zoom: 3 },
 };
 
-function getProjectRegion(project: CarbonProject): MapRegionFilter {
+export function getProjectRegion(project: CarbonProject): MapRegionFilter {
   const loc = (project.location + ' ' + project.name).toLowerCase();
   if (
     loc.includes('brazil') ||
@@ -105,10 +102,25 @@ function getProjectRegion(project: CarbonProject): MapRegionFilter {
   ) {
     return 'Asia-Pacific';
   }
+
+  // Coordinate-based fallback
+  const { latitude: lat, longitude: lng } = project.coordinates || {};
+  if (typeof lat === 'number' && typeof lng === 'number') {
+    if (lat >= -60 && lat <= 15 && lng >= -90 && lng <= -30) return 'South America';
+    if (lat >= 10 && lat <= 85 && lng >= -170 && lng <= -50) return 'North America';
+    if (lat >= 35 && lat <= 75 && lng >= -25 && lng <= 45) return 'Europe';
+    if (lat >= -35 && lat <= 38 && lng >= -20 && lng <= 55) return 'Africa';
+    if (lng >= 55 || (lat <= 15 && lng >= 90) || lat <= -10) return 'Asia-Pacific';
+  }
+
   return 'All';
 }
 
-function getProjectTypeColor(type: ProjectType): { fill: string; stroke: string; glow: string } {
+export function getProjectTypeColor(type: ProjectType): {
+  fill: string;
+  stroke: string;
+  glow: string;
+} {
   switch (type) {
     case 'Reforestation':
       return { fill: '#10b981', stroke: '#059669', glow: 'rgba(16, 185, 129, 0.4)' };
@@ -192,7 +204,9 @@ export function OffsetProjectMap({
   initialRegion = 'All',
   initialType = 'all',
   initialAvailability = 'all',
+  filters: externalFilters,
   height = '620px',
+  className = '',
   showFilters = true,
   filters: externalFilters,
   className = '',
@@ -200,7 +214,8 @@ export function OffsetProjectMap({
 }: OffsetProjectMapProps): JSX.Element {
   const [selectedRegion, setSelectedRegion] = useState<MapRegionFilter>(initialRegion);
   const [selectedType, setSelectedType] = useState<string>(initialType);
-  const [selectedAvailability, setSelectedAvailability] = useState<MapAvailabilityFilter>(initialAvailability);
+  const [selectedAvailability, setSelectedAvailability] =
+    useState<MapAvailabilityFilter>(initialAvailability);
   const [activeProjectHover, setActiveProjectHover] = useState<CarbonProject | null>(null);
 
   // ── Climate Layer States ──────────────────────────────────────────────────
@@ -262,7 +277,7 @@ export function OffsetProjectMap({
   }, [filteredProjects]);
 
   const avgPrice = useMemo(() => {
-    if (filteredProjects.length === 0) return 0;
+    if (filteredProjects.length === 0) return '0.00';
     const sum = filteredProjects.reduce((s, p) => s + p.pricePerTon, 0);
     return (sum / filteredProjects.length).toFixed(2);
   }, [filteredProjects]);
@@ -282,18 +297,29 @@ export function OffsetProjectMap({
           {/* Quick Stats Bar */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 pb-4 border-b border-border/60">
             <div className="flex flex-col">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Active Projects</span>
-              <span className="text-xl font-bold text-foreground">{filteredProjects.length}</span>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Active Projects
+              </span>
+              <span
+                className="text-xl font-bold text-foreground"
+                data-testid="active-projects-count"
+              >
+                {filteredProjects.length}
+              </span>
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Available Credits</span>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Available Credits
+              </span>
               <span className="text-xl font-bold text-emerald-500">
                 {totalSupply.toLocaleString(undefined, { maximumFractionDigits: 0 })}{' '}
                 <span className="text-xs font-normal text-muted-foreground">tCO2e</span>
               </span>
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Avg. Price / Ton</span>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Avg. Price / Ton
+              </span>
               <span className="text-xl font-bold text-primary">${avgPrice}</span>
             </div>
             <div className="flex flex-col">
@@ -307,24 +333,37 @@ export function OffsetProjectMap({
           {/* Filter Controls Row */}
           <div className="flex flex-wrap items-center gap-3 justify-between">
             {/* Region Pills */}
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div
+              className="flex flex-wrap items-center gap-1.5"
+              role="group"
+              aria-label="Filter by region"
+            >
               <span className="text-xs font-semibold text-muted-foreground mr-1">Region:</span>
-              {(['All', 'Africa', 'South America', 'North America', 'Europe', 'Asia-Pacific'] as MapRegionFilter[]).map(
-                (region) => (
-                  <button
-                    key={region}
-                    type="button"
-                    onClick={() => setSelectedRegion(region)}
-                    className={`px-3 py-1 text-xs font-medium rounded-full transition-all cursor-pointer ${
-                      selectedRegion === region
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground'
-                    }`}
-                  >
-                    {region}
-                  </button>
-                )
-              )}
+              {(
+                [
+                  'All',
+                  'Africa',
+                  'South America',
+                  'North America',
+                  'Europe',
+                  'Asia-Pacific',
+                ] as MapRegionFilter[]
+              ).map((region) => (
+                <button
+                  key={region}
+                  type="button"
+                  aria-label={`Filter region ${region}`}
+                  aria-pressed={selectedRegion === region}
+                  onClick={() => setSelectedRegion(region)}
+                  className={`px-3 py-1 text-xs font-medium rounded-full transition-all cursor-pointer ${
+                    selectedRegion === region
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}
+                >
+                  {region}
+                </button>
+              ))}
             </div>
 
             {/* Type & Availability Selects */}
@@ -354,7 +393,9 @@ export function OffsetProjectMap({
                 <option value="out_of_stock">Sold Out / Reserved</option>
               </select>
 
-              {(selectedRegion !== 'All' || selectedType !== 'all' || selectedAvailability !== 'all') && (
+              {(selectedRegion !== 'All' ||
+                selectedType !== 'all' ||
+                selectedAvailability !== 'all') && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -363,7 +404,7 @@ export function OffsetProjectMap({
                     setSelectedType('all');
                     setSelectedAvailability('all');
                   }}
-                  className="text-xs text-muted-foreground hover:text-foreground h-8"
+                  className="text-xs text-muted-foreground hover:text-foreground h-8 cursor-pointer"
                 >
                   Reset
                 </Button>
@@ -476,7 +517,10 @@ export function OffsetProjectMap({
       )}
 
       {/* Interactive Map Visualizer */}
-      <div className="relative w-full rounded-2xl overflow-hidden border border-border/80 shadow-lg bg-card" style={{ height }}>
+      <div
+        className="relative w-full rounded-2xl overflow-hidden border border-border/80 shadow-lg bg-card"
+        style={{ height }}
+      >
         <MapContainer
           center={mapConfig.center}
           zoom={mapConfig.zoom}
@@ -809,15 +853,23 @@ export function OffsetProjectMap({
           )}
         </div>
 
-        {/* Floating Active Hover Card at Top Left */}
+        {/* Floating Active Hover Card at Top Left with comprehensive details */}
         {activeProjectHover && (
-          <div className="absolute top-4 left-4 z-[1000] bg-background/95 backdrop-blur-md p-3.5 rounded-xl border border-border/90 shadow-xl max-w-xs pointer-events-none transition-all duration-200">
+          <div
+            data-testid="project-hover-card"
+            className="absolute top-4 left-4 z-[1000] bg-background/95 backdrop-blur-md p-3.5 rounded-xl border border-border/90 shadow-xl max-w-xs pointer-events-none transition-all duration-200"
+          >
             <div className="flex items-center gap-1.5 mb-1">
               <Badge variant="outline" className="text-[10px]">
                 {activeProjectHover.type}
               </Badge>
-              <Badge variant={activeProjectHover.isOutOfStock ? 'destructive' : 'default'} className="text-[10px]">
-                {activeProjectHover.verificationStatus}
+              <Badge
+                variant={activeProjectHover.isOutOfStock ? 'destructive' : 'default'}
+                className="text-[10px]"
+              >
+                {activeProjectHover.isOutOfStock
+                  ? 'Sold Out'
+                  : activeProjectHover.verificationStatus}
               </Badge>
             </div>
             <h4 className="font-bold text-sm text-foreground leading-tight mb-1">{activeProjectHover.name}</h4>
@@ -842,6 +894,19 @@ export function OffsetProjectMap({
                 {activeProjectHover.availableSupply.toLocaleString()} tCO2e available
               </span>
             </div>
+
+            {activeProjectHover.coBenefits && activeProjectHover.coBenefits.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {activeProjectHover.coBenefits.map((b) => (
+                  <span
+                    key={b}
+                    className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded"
+                  >
+                    {b}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

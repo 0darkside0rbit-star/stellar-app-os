@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation';
 import { SponsorBadges } from '@/components/molecules/SponsorBadges/SponsorBadges';
+import { SponsorMilestoneHistory } from '@/components/organisms/SponsorMilestoneHistory';
+import { getSponsorMilestones } from '@/lib/gamification/sponsor-milestones';
 import { getSponsorProfile } from '@/lib/api/sponsors';
 import { getSponsorPortfolio } from '@/lib/api/sponsor-portfolio';
 import { ImpactStatCard } from '@/components/atoms/ImpactStatCard';
@@ -50,6 +52,9 @@ export default async function SponsorProfilePage({
   const verifiedCount = forest.statusBreakdown
     .filter((entry) => entry.status === 'verified' || entry.status === 'completed')
     .reduce((sum, entry) => sum + entry.count, 0);
+
+  const milestones = getSponsorMilestones(plantingHistory);
+  const sponsorDisplayName = profile.name ?? formatAddress(profile.address);
 
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-12 sm:px-6 lg:px-8">
@@ -129,6 +134,8 @@ export default async function SponsorProfilePage({
       </section>
 
       <SponsorBadges totalTrees={profile.totalTrees} />
+
+      <SponsorMilestoneHistory milestones={milestones} sponsorName={sponsorDisplayName} />
 
       {/* ── Forest statistics ─────────────────────────────────────────── */}
       <section aria-labelledby="forest-stats-heading">

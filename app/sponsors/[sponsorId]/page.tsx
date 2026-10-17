@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { SponsorBadges } from '@/components/molecules/SponsorBadges/SponsorBadges';
 import { SponsorMilestoneHistory } from '@/components/organisms/SponsorMilestoneHistory';
 import { getSponsorMilestones } from '@/lib/gamification/sponsor-milestones';
@@ -103,12 +104,20 @@ export default async function SponsorProfilePage({
 
       {/* ── Impact overview ───────────────────────────────────────────── */}
       <section aria-labelledby="sponsor-impact-heading">
-        <h2
-          id="sponsor-impact-heading"
-          className="text-2xl font-semibold text-slate-900 dark:text-white"
-        >
-          Impact overview
-        </h2>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <h2
+            id="sponsor-impact-heading"
+            className="text-2xl font-semibold text-slate-900 dark:text-white"
+          >
+            Impact overview
+          </h2>
+          <Link
+            href="/sponsors/compare"
+            className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1"
+          >
+            Compare Tree Sponsorship Offerings ↗
+          </Link>
+        </div>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <ImpactStatCard
             label="Trees verified"

@@ -9,21 +9,27 @@ import type { CarbonProject, ProjectType } from '@/lib/types/carbon';
 import 'leaflet/dist/leaflet.css';
 
 export type MapRegionFilter =
-  | 'All'
-  | 'Africa'
-  | 'South America'
-  | 'North America'
-  | 'Europe'
-  | 'Asia-Pacific';
+  'All' | 'Africa' | 'South America' | 'North America' | 'Europe' | 'Asia-Pacific';
 
 export type MapAvailabilityFilter = 'all' | 'in_stock' | 'out_of_stock';
 
-interface OffsetProjectMapProps {
+export interface OffsetProjectMapFilters {
+  /** Project types to show; empty array = all */
+  types?: ProjectType[];
+  /** Regions or locations to show; empty array = all */
+  regions?: string[];
+  /** When true, hides out-of-stock projects */
+  availableOnly?: boolean;
+}
+
+export interface OffsetProjectMapProps {
   projects: CarbonProject[];
   initialRegion?: MapRegionFilter;
   initialType?: string;
   initialAvailability?: MapAvailabilityFilter;
+  filters?: OffsetProjectMapFilters;
   height?: string;
+  className?: string;
   showFilters?: boolean;
 }
 
@@ -37,27 +43,85 @@ const REGION_CENTERS: Record<MapRegionFilter, { center: [number, number]; zoom: 
   'Asia-Pacific': { center: [10, 105], zoom: 3 },
 };
 
-function getProjectRegion(project: CarbonProject): MapRegionFilter {
+export function getProjectRegion(project: CarbonProject): MapRegionFilter {
   const loc = (project.location + ' ' + project.name).toLowerCase();
-  if (loc.includes('brazil') || loc.includes('amazon') || loc.includes('peru') || loc.includes('colombia') || loc.includes('andes')) {
+  if (
+    loc.includes('brazil') ||
+    loc.includes('amazon') ||
+    loc.includes('peru') ||
+    loc.includes('colombia') ||
+    loc.includes('andes') ||
+    loc.includes('chile') ||
+    loc.includes('argentina') ||
+    loc.includes('ecuador')
+  ) {
     return 'South America';
   }
-  if (loc.includes('kenya') || loc.includes('senegal') || loc.includes('nigeria') || loc.includes('ghana') || loc.includes('africa') || loc.includes('sahel')) {
+  if (
+    loc.includes('kenya') ||
+    loc.includes('senegal') ||
+    loc.includes('nigeria') ||
+    loc.includes('ghana') ||
+    loc.includes('africa') ||
+    loc.includes('sahel') ||
+    loc.includes('uganda') ||
+    loc.includes('tanzania') ||
+    loc.includes('rwanda')
+  ) {
     return 'Africa';
   }
-  if (loc.includes('usa') || loc.includes('texas') || loc.includes('canada') || loc.includes('ontario') || loc.includes('north america')) {
+  if (
+    loc.includes('usa') ||
+    loc.includes('texas') ||
+    loc.includes('canada') ||
+    loc.includes('ontario') ||
+    loc.includes('north america') ||
+    loc.includes('mexico')
+  ) {
     return 'North America';
   }
-  if (loc.includes('iceland') || loc.includes('scotland') || loc.includes('united kingdom') || loc.includes('europe') || loc.includes('germany')) {
+  if (
+    loc.includes('iceland') ||
+    loc.includes('scotland') ||
+    loc.includes('united kingdom') ||
+    loc.includes('europe') ||
+    loc.includes('germany') ||
+    loc.includes('france') ||
+    loc.includes('spain')
+  ) {
     return 'Europe';
   }
-  if (loc.includes('india') || loc.includes('indonesia') || loc.includes('bangladesh') || loc.includes('australia') || loc.includes('asia') || loc.includes('queensland')) {
+  if (
+    loc.includes('india') ||
+    loc.includes('indonesia') ||
+    loc.includes('bangladesh') ||
+    loc.includes('australia') ||
+    loc.includes('asia') ||
+    loc.includes('queensland') ||
+    loc.includes('china') ||
+    loc.includes('japan')
+  ) {
     return 'Asia-Pacific';
   }
+
+  // Coordinate-based fallback
+  const { latitude: lat, longitude: lng } = project.coordinates || {};
+  if (typeof lat === 'number' && typeof lng === 'number') {
+    if (lat >= -60 && lat <= 15 && lng >= -90 && lng <= -30) return 'South America';
+    if (lat >= 10 && lat <= 85 && lng >= -170 && lng <= -50) return 'North America';
+    if (lat >= 35 && lat <= 75 && lng >= -25 && lng <= 45) return 'Europe';
+    if (lat >= -35 && lat <= 38 && lng >= -20 && lng <= 55) return 'Africa';
+    if (lng >= 55 || (lat <= 15 && lng >= 90) || lat <= -10) return 'Asia-Pacific';
+  }
+
   return 'All';
 }
 
-function getProjectTypeColor(type: ProjectType): { fill: string; stroke: string; glow: string } {
+export function getProjectTypeColor(type: ProjectType): {
+  fill: string;
+  stroke: string;
+  glow: string;
+} {
   switch (type) {
     case 'Reforestation':
       return { fill: '#10b981', stroke: '#059669', glow: 'rgba(16, 185, 129, 0.4)' };
@@ -85,12 +149,15 @@ export function OffsetProjectMap({
   initialRegion = 'All',
   initialType = 'all',
   initialAvailability = 'all',
+  filters: externalFilters,
   height = '620px',
+  className = '',
   showFilters = true,
 }: OffsetProjectMapProps): JSX.Element {
   const [selectedRegion, setSelectedRegion] = useState<MapRegionFilter>(initialRegion);
   const [selectedType, setSelectedType] = useState<string>(initialType);
-  const [selectedAvailability, setSelectedAvailability] = useState<MapAvailabilityFilter>(initialAvailability);
+  const [selectedAvailability, setSelectedAvailability] =
+    useState<MapAvailabilityFilter>(initialAvailability);
   const [activeProjectHover, setActiveProjectHover] = useState<CarbonProject | null>(null);
 
   // Configure Leaflet icon defaults in browser
@@ -109,6 +176,26 @@ export function OffsetProjectMap({
   // Filter projects by region, type, and availability
   const filteredProjects = useMemo(() => {
     return projects.filter((p) => {
+      // If externalFilters are provided, prioritize them
+      if (externalFilters) {
+        if (
+          externalFilters.types &&
+          externalFilters.types.length > 0 &&
+          !externalFilters.types.includes(p.type)
+        ) {
+          return false;
+        }
+        if (externalFilters.regions && externalFilters.regions.length > 0) {
+          const reg = getProjectRegion(p);
+          const matches =
+            externalFilters.regions.includes(p.location) || externalFilters.regions.includes(reg);
+          if (!matches) return false;
+        }
+        if (externalFilters.availableOnly && (p.isOutOfStock || p.availableSupply <= 0)) {
+          return false;
+        }
+      }
+
       // Region match
       if (selectedRegion !== 'All') {
         const reg = getProjectRegion(p);
@@ -126,7 +213,7 @@ export function OffsetProjectMap({
       }
       return true;
     });
-  }, [projects, selectedRegion, selectedType, selectedAvailability]);
+  }, [projects, selectedRegion, selectedType, selectedAvailability, externalFilters]);
 
   // Aggregate summary metrics
   const totalSupply = useMemo(() => {
@@ -134,7 +221,7 @@ export function OffsetProjectMap({
   }, [filteredProjects]);
 
   const avgPrice = useMemo(() => {
-    if (filteredProjects.length === 0) return 0;
+    if (filteredProjects.length === 0) return '0.00';
     const sum = filteredProjects.reduce((s, p) => s + p.pricePerTon, 0);
     return (sum / filteredProjects.length).toFixed(2);
   }, [filteredProjects]);
@@ -148,27 +235,44 @@ export function OffsetProjectMap({
   const mapConfig = REGION_CENTERS[selectedRegion] || REGION_CENTERS.All;
 
   return (
-    <div className="flex flex-col gap-4 w-full" data-testid="offset-project-map-container">
-      {showFilters && (
+    <div
+      className={`flex flex-col gap-4 w-full ${className}`}
+      data-testid="offset-project-map-container"
+    >
+      {showFilters && !externalFilters && (
         <div className="bg-card border border-border/80 rounded-2xl p-4 shadow-sm backdrop-blur-md">
           {/* Quick Stats Bar */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 pb-4 border-b border-border/60">
             <div className="flex flex-col">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Active Projects</span>
-              <span className="text-xl font-bold text-foreground">{filteredProjects.length}</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Available Credits</span>
-              <span className="text-xl font-bold text-emerald-500">
-                {totalSupply.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xs font-normal text-muted-foreground">tCO2e</span>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Active Projects
+              </span>
+              <span
+                className="text-xl font-bold text-foreground"
+                data-testid="active-projects-count"
+              >
+                {filteredProjects.length}
               </span>
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Avg. Price / Ton</span>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Available Credits
+              </span>
+              <span className="text-xl font-bold text-emerald-500">
+                {totalSupply.toLocaleString(undefined, { maximumFractionDigits: 0 })}{' '}
+                <span className="text-xs font-normal text-muted-foreground">tCO2e</span>
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Avg. Price / Ton
+              </span>
               <span className="text-xl font-bold text-primary">${avgPrice}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Active Region</span>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Active Region
+              </span>
               <span className="text-xl font-bold text-foreground">{selectedRegion}</span>
             </div>
           </div>
@@ -176,24 +280,37 @@ export function OffsetProjectMap({
           {/* Filter Controls Row */}
           <div className="flex flex-wrap items-center gap-3 justify-between">
             {/* Region Pills */}
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div
+              className="flex flex-wrap items-center gap-1.5"
+              role="group"
+              aria-label="Filter by region"
+            >
               <span className="text-xs font-semibold text-muted-foreground mr-1">Region:</span>
-              {(['All', 'Africa', 'South America', 'North America', 'Europe', 'Asia-Pacific'] as MapRegionFilter[]).map(
-                (region) => (
-                  <button
-                    key={region}
-                    type="button"
-                    onClick={() => setSelectedRegion(region)}
-                    className={`px-3 py-1 text-xs font-medium rounded-full transition-all cursor-pointer ${
-                      selectedRegion === region
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground'
-                    }`}
-                  >
-                    {region}
-                  </button>
-                )
-              )}
+              {(
+                [
+                  'All',
+                  'Africa',
+                  'South America',
+                  'North America',
+                  'Europe',
+                  'Asia-Pacific',
+                ] as MapRegionFilter[]
+              ).map((region) => (
+                <button
+                  key={region}
+                  type="button"
+                  aria-label={`Filter region ${region}`}
+                  aria-pressed={selectedRegion === region}
+                  onClick={() => setSelectedRegion(region)}
+                  className={`px-3 py-1 text-xs font-medium rounded-full transition-all cursor-pointer ${
+                    selectedRegion === region
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}
+                >
+                  {region}
+                </button>
+              ))}
             </div>
 
             {/* Type & Availability Selects */}
@@ -223,7 +340,9 @@ export function OffsetProjectMap({
                 <option value="out_of_stock">Sold Out / Reserved</option>
               </select>
 
-              {(selectedRegion !== 'All' || selectedType !== 'all' || selectedAvailability !== 'all') && (
+              {(selectedRegion !== 'All' ||
+                selectedType !== 'all' ||
+                selectedAvailability !== 'all') && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -232,7 +351,7 @@ export function OffsetProjectMap({
                     setSelectedType('all');
                     setSelectedAvailability('all');
                   }}
-                  className="text-xs text-muted-foreground hover:text-foreground h-8"
+                  className="text-xs text-muted-foreground hover:text-foreground h-8 cursor-pointer"
                 >
                   Reset
                 </Button>
@@ -243,7 +362,10 @@ export function OffsetProjectMap({
       )}
 
       {/* Interactive Map Visualizer */}
-      <div className="relative w-full rounded-2xl overflow-hidden border border-border/80 shadow-lg bg-card" style={{ height }}>
+      <div
+        className="relative w-full rounded-2xl overflow-hidden border border-border/80 shadow-lg bg-card"
+        style={{ height }}
+      >
         <MapContainer
           center={mapConfig.center}
           zoom={mapConfig.zoom}
@@ -260,7 +382,9 @@ export function OffsetProjectMap({
           {filteredProjects.map((project) => {
             const colors = getProjectTypeColor(project.type);
             const isOutOfStock = project.isOutOfStock || project.availableSupply <= 0;
-            const markerRadius = isOutOfStock ? 7 : Math.min(18, 9 + Math.log10(Math.max(10, project.availableSupply)) * 2.5);
+            const markerRadius = isOutOfStock
+              ? 8
+              : Math.min(18, 9 + Math.log10(Math.max(10, project.availableSupply)) * 2.5);
 
             return (
               <CircleMarker
@@ -269,7 +393,7 @@ export function OffsetProjectMap({
                 radius={markerRadius}
                 pathOptions={{
                   fillColor: isOutOfStock ? '#94a3b8' : colors.fill,
-                  fillOpacity: isOutOfStock ? 0.4 : 0.85,
+                  fillOpacity: isOutOfStock ? 0.45 : 0.85,
                   color: isOutOfStock ? '#64748b' : colors.stroke,
                   weight: 2,
                 }}
@@ -279,30 +403,65 @@ export function OffsetProjectMap({
                 }}
               >
                 {/* On-Hover Interactive Tooltip */}
-                <Tooltip direction="top" offset={[0, -10]} opacity={1} className="offset-project-tooltip">
-                  <div className="p-1 min-w-[220px] max-w-[280px]">
+                <Tooltip
+                  direction="top"
+                  offset={[0, -10]}
+                  opacity={1}
+                  className="offset-project-tooltip"
+                >
+                  <div
+                    className="p-1 min-w-[240px] max-w-[300px]"
+                    data-testid={`project-tooltip-${project.id}`}
+                  >
                     <div className="flex items-center justify-between gap-1 mb-1">
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                         {project.type}
                       </span>
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                          isOutOfStock ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-600'
+                          isOutOfStock
+                            ? 'bg-red-500/10 text-red-500'
+                            : 'bg-emerald-500/10 text-emerald-600'
                         }`}
                       >
-                        {isOutOfStock ? 'Sold Out' : `${project.availableSupply.toLocaleString()} tCO2e`}
+                        {isOutOfStock
+                          ? 'Sold Out'
+                          : `${project.availableSupply.toLocaleString()} tCO2e`}
                       </span>
                     </div>
 
-                    <h4 className="font-semibold text-xs leading-tight mb-1 text-foreground">{project.name}</h4>
-                    <p className="text-[11px] text-muted-foreground mb-1.5 flex items-center gap-1">
+                    <h4 className="font-semibold text-xs leading-tight mb-0.5 text-foreground">
+                      {project.name}
+                    </h4>
+                    <p className="text-[11px] text-muted-foreground mb-1 flex items-center gap-1">
                       📍 {project.location}
                     </p>
 
+                    <p className="text-[10px] text-muted-foreground line-clamp-2 mb-1.5">
+                      {project.description}
+                    </p>
+
                     <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
-                      <span className="font-semibold text-primary">${project.pricePerTon.toFixed(2)} / ton</span>
-                      <span className="text-[10px] text-muted-foreground">{project.verificationStatus}</span>
+                      <span className="font-semibold text-primary">
+                        ${project.pricePerTon.toFixed(2)} / ton
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {project.verificationStatus} · {project.vintageYear}
+                      </span>
                     </div>
+
+                    {project.coBenefits && project.coBenefits.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1.5 pt-1 border-t border-border/40">
+                        {project.coBenefits.slice(0, 3).map((benefit) => (
+                          <span
+                            key={benefit}
+                            className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.2 rounded"
+                          >
+                            {benefit}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </Tooltip>
 
@@ -313,7 +472,10 @@ export function OffsetProjectMap({
                       <Badge variant="outline" className="text-[10px]">
                         {project.type}
                       </Badge>
-                      <Badge variant={isOutOfStock ? 'destructive' : 'default'} className="text-[10px]">
+                      <Badge
+                        variant={isOutOfStock ? 'destructive' : 'default'}
+                        className="text-[10px]"
+                      >
                         {isOutOfStock ? 'Out of Stock' : 'Active Listing'}
                       </Badge>
                     </div>
@@ -328,7 +490,9 @@ export function OffsetProjectMap({
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Standard:</span>
-                        <span className="font-medium text-foreground">{project.verificationStatus}</span>
+                        <span className="font-medium text-foreground">
+                          {project.verificationStatus}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Vintage Year:</span>
@@ -342,7 +506,9 @@ export function OffsetProjectMap({
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Price per Ton:</span>
-                        <span className="font-bold text-primary">${project.pricePerTon.toFixed(2)} USDC</span>
+                        <span className="font-bold text-primary">
+                          ${project.pricePerTon.toFixed(2)} USDC
+                        </span>
                       </div>
                     </div>
 
@@ -353,7 +519,10 @@ export function OffsetProjectMap({
                         </span>
                         <div className="flex flex-wrap gap-1">
                           {project.coBenefits.map((b) => (
-                            <span key={b} className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                            <span
+                              key={b}
+                              className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded"
+                            >
                               {b}
                             </span>
                           ))}
@@ -376,7 +545,7 @@ export function OffsetProjectMap({
         </MapContainer>
 
         {/* Legend Overlay at Bottom Right */}
-        <div className="absolute bottom-4 right-4 z-[1000] bg-background/90 backdrop-blur-md p-3 rounded-xl border border-border/80 shadow-md text-xs">
+        <div className="absolute bottom-4 right-4 z-[1000] bg-background/90 backdrop-blur-md p-3 rounded-xl border border-border/80 shadow-md text-xs pointer-events-auto">
           <div className="font-semibold text-foreground mb-2 flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse" /> Project Types
           </div>
@@ -404,25 +573,70 @@ export function OffsetProjectMap({
           </div>
         </div>
 
-        {/* Floating Active Hover Card at Top Left */}
+        {/* Floating Active Hover Card at Top Left with comprehensive details */}
         {activeProjectHover && (
-          <div className="absolute top-4 left-4 z-[1000] bg-background/95 backdrop-blur-md p-3.5 rounded-xl border border-border/90 shadow-xl max-w-xs pointer-events-none transition-all duration-200">
+          <div
+            data-testid="project-hover-card"
+            className="absolute top-4 left-4 z-[1000] bg-background/95 backdrop-blur-md p-3.5 rounded-xl border border-border/90 shadow-xl max-w-xs pointer-events-none transition-all duration-200"
+          >
             <div className="flex items-center gap-1.5 mb-1">
               <Badge variant="outline" className="text-[10px]">
                 {activeProjectHover.type}
               </Badge>
-              <Badge variant={activeProjectHover.isOutOfStock ? 'destructive' : 'default'} className="text-[10px]">
-                {activeProjectHover.verificationStatus}
+              <Badge
+                variant={activeProjectHover.isOutOfStock ? 'destructive' : 'default'}
+                className="text-[10px]"
+              >
+                {activeProjectHover.isOutOfStock
+                  ? 'Sold Out'
+                  : activeProjectHover.verificationStatus}
               </Badge>
             </div>
-            <h4 className="font-bold text-sm text-foreground leading-tight mb-1">{activeProjectHover.name}</h4>
-            <p className="text-xs text-muted-foreground mb-1.5">📍 {activeProjectHover.location}</p>
-            <div className="flex items-center justify-between text-xs pt-1 border-t border-border/60">
-              <span className="font-semibold text-primary">${activeProjectHover.pricePerTon.toFixed(2)} / ton</span>
-              <span className="font-medium text-emerald-600">
-                {activeProjectHover.availableSupply.toLocaleString()} tCO2e available
-              </span>
+            <h4 className="font-bold text-sm text-foreground leading-tight mb-1">
+              {activeProjectHover.name}
+            </h4>
+            <p className="text-xs text-muted-foreground mb-1">📍 {activeProjectHover.location}</p>
+            <p className="text-[11px] text-muted-foreground/90 line-clamp-2 mb-2">
+              {activeProjectHover.description}
+            </p>
+
+            <div className="space-y-0.5 text-[11px] mb-2 bg-muted/50 p-2 rounded-lg">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Vintage:</span>
+                <span className="font-medium text-foreground">
+                  {activeProjectHover.vintageYear}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Status:</span>
+                <span
+                  className={`font-semibold ${activeProjectHover.isOutOfStock ? 'text-destructive' : 'text-emerald-600'}`}
+                >
+                  {activeProjectHover.isOutOfStock
+                    ? 'Sold Out'
+                    : `${activeProjectHover.availableSupply.toLocaleString()} tCO2e`}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Price / ton:</span>
+                <span className="font-bold text-primary">
+                  ${activeProjectHover.pricePerTon.toFixed(2)} USDC
+                </span>
+              </div>
             </div>
+
+            {activeProjectHover.coBenefits && activeProjectHover.coBenefits.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {activeProjectHover.coBenefits.map((b) => (
+                  <span
+                    key={b}
+                    className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded"
+                  >
+                    {b}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

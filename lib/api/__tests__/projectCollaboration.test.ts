@@ -6,7 +6,9 @@ import {
   getAdminView,
   getOrgScopedView,
   getUnifiedReport,
+  listPartnerOrgs,
   listZonesForOrg,
+  removePartnerOrg,
   resetProjectCollaboration,
   submitZoneEntry,
 } from '@/lib/api/projectCollaboration';
@@ -137,6 +139,81 @@ describe('AC2 — each organisation sees only its assigned zones', () => {
         areaHectares: 1,
       })
     ).toMatchObject({ ok: false, error: 'invalid_zone' });
+  });
+});
+
+describe('AC1 — admin can remove co-managing organisations', () => {
+  it('lets only the admin remove an org and releases its zones', () => {
+    const orgA = addOrg('Org A');
+    const orgB = addOrg('Org B');
+    const zones = getAdminView(PROJECT, ADMIN)!.zones;
+    assignZones(PROJECT, { orgId: orgA, zoneIds: [zones[0].id] }, ADMIN);
+    submitZoneEntry(PROJECT, {
+      orgId: orgA,
+      zoneId: zones[0].id,
+      treesPlanted: 50,
+      areaHectares: 1,
+    });
+
+    expect(removePartnerOrg(PROJECT, orgA, OTHER)).toMatchObject({
+      ok: false,
+      error: 'not_project_admin',
+    });
+    const removed = removePartnerOrg(PROJECT, orgA, ADMIN);
+    expect(removed.ok).toBe(true);
+
+    expect(listPartnerOrgs(PROJECT).map((o) => o.id)).toEqual([orgB]);
+    expect(listZonesForOrg(PROJECT, orgA)).toHaveLength(0);
+    const freed = getAdminView(PROJECT, ADMIN)!.zones.find((z) => z.id === zones[0].id)!;
+    expect(freed.assignedOrgId).toBeNull();
+    expect(
+      submitZoneEntry(PROJECT, {
+        orgId: orgA,
+        zoneId: zones[0].id,
+        treesPlanted: 10,
+        areaHectares: 1,
+      })
+    ).toMatchObject({ ok: false, error: 'org_not_found' });
+  });
+
+  it('drops the removed org and its entries from the unified report', () => {
+    const orgA = addOrg('Org A');
+    const orgB = addOrg('Org B');
+    const zones = getAdminView(PROJECT, ADMIN)!.zones;
+    assignZones(PROJECT, { orgId: orgA, zoneIds: [zones[0].id] }, ADMIN);
+    assignZones(PROJECT, { orgId: orgB, zoneIds: [zones[1].id] }, ADMIN);
+    submitZoneEntry(PROJECT, {
+      orgId: orgA,
+      zoneId: zones[0].id,
+      treesPlanted: 100,
+      areaHectares: 2,
+    });
+    submitZoneEntry(PROJECT, {
+      orgId: orgB,
+      zoneId: zones[1].id,
+      treesPlanted: 200,
+      areaHectares: 4,
+    });
+
+    expect(removePartnerOrg(PROJECT, orgA, ADMIN).ok).toBe(true);
+    const report = getUnifiedReport(PROJECT)!;
+    expect(report.totals).toMatchObject({ organisations: 1, treesPlanted: 200, areaHectares: 4 });
+    expect(report.byOrganisation.some((row) => row.orgId === orgA)).toBe(false);
+    const freedZone = report.byZone.find((row) => row.zoneId === zones[0].id)!;
+    expect(freedZone.orgId).toBeNull();
+    expect(freedZone.treesPlanted).toBe(0);
+  });
+
+  it('returns org_not_found for unknown orgs', () => {
+    addOrg('Org A');
+    expect(removePartnerOrg(PROJECT, 'org-ghost', ADMIN)).toMatchObject({
+      ok: false,
+      error: 'org_not_found',
+    });
+    expect(removePartnerOrg('proj-ghost', 'org-1', ADMIN)).toMatchObject({
+      ok: false,
+      error: 'project_not_found',
+    });
   });
 });
 

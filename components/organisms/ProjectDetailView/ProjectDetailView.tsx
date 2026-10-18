@@ -31,6 +31,7 @@ import {
 } from '@/components/organisms/ProjectTimeline/ProjectTimeline';
 import { ProjectCarousel } from '@/components/organisms/ProjectCarousel/ProjectCarousel';
 import { ProjectPlanters } from '@/components/organisms/ProjectPlanters';
+import { ProjectProtectionImpact } from '@/components/organisms/SponsorImpact/ProjectProtectionImpact';
 
 import { mockCarbonProjects } from '@/lib/api/mock/carbonProjects';
 import { toast } from 'sonner';
@@ -223,6 +224,13 @@ export function ProjectDetailView({ adminProject, carbonProject }: ProjectDetail
                   and biodiversity health.
                 </p>
               </div>
+            </section>
+
+            <section id="deforestation-prevention">
+              <ProjectProtectionImpact
+                projectName={adminProject.name}
+                coordinates={carbonProject.coordinates}
+              />
             </section>
 
             <section id="timeline">

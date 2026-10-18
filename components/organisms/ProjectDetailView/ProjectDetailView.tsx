@@ -21,6 +21,7 @@ import { Text } from '@/components/atoms/Text';
 import { Badge } from '@/components/atoms/Badge';
 import { Card } from '@/components/molecules/Card';
 import { FarmPlotSatelliteView } from '@/components/organisms/FarmPlotSatelliteView/FarmPlotSatelliteView';
+import { ProjectCollaborationDashboard } from '@/components/organisms/ProjectDetailView/ProjectCollaborationDashboard';
 import {
   ImpactMetrics,
   type ImpactMetric,
@@ -316,6 +317,12 @@ export function ProjectDetailView({ adminProject, carbonProject }: ProjectDetail
             </Card>
           </aside>
         </div>
+
+        {/* Multi-organisation collaboration dashboard (#1696) */}
+        <ProjectCollaborationDashboard
+          projectId={adminProject.id}
+          projectName={adminProject.name}
+        />
 
         {/* Related Projects */}
         <section className="mt-24">

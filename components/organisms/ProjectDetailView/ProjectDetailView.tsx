@@ -30,6 +30,7 @@ import {
   type Milestone,
 } from '@/components/organisms/ProjectTimeline/ProjectTimeline';
 import { ProjectCarousel } from '@/components/organisms/ProjectCarousel/ProjectCarousel';
+import { BiodiversityIndex } from '@/components/organisms/BiodiversityIndex/BiodiversityIndex';
 
 import { mockCarbonProjects } from '@/lib/api/mock/carbonProjects';
 import { toast } from 'sonner';
@@ -230,6 +231,57 @@ export function ProjectDetailView({ adminProject, carbonProject }: ProjectDetail
                 <div className="h-px bg-stellar-blue/20 flex-1 ml-4" />
               </Text>
               <ProjectTimeline milestones={milestones} />
+            </section>
+
+            {/* Issue #1693: Forest Biodiversity Index */}
+            <section id="biodiversity">
+              <Text variant="h3" className="mb-6 font-bold flex items-center gap-2">
+                Biodiversity Index
+                <div className="h-px bg-stellar-blue/20 flex-1 ml-4" />
+              </Text>
+              <BiodiversityIndex
+                currentSpecies={[
+                  { speciesId: '1', speciesName: 'Oak', count: 450 },
+                  { speciesId: '2', speciesName: 'Pine', count: 320 },
+                  { speciesId: '3', speciesName: 'Maple', count: 280 },
+                  { speciesId: '4', speciesName: 'Birch', count: 150 },
+                  { speciesId: '5', speciesName: 'Cedar', count: 100 },
+                ]}
+                baselineSpecies={[
+                  { speciesId: '1', speciesName: 'Oak', count: 200 },
+                  { speciesId: '2', speciesName: 'Pine', count: 150 },
+                ]}
+                annualCensus={[
+                  {
+                    year: 2024,
+                    speciesData: [
+                      { speciesId: '1', speciesName: 'Oak', count: 200 },
+                      { speciesId: '2', speciesName: 'Pine', count: 150 },
+                    ],
+                    date: '2024-01-01',
+                  },
+                  {
+                    year: 2025,
+                    speciesData: [
+                      { speciesId: '1', speciesName: 'Oak', count: 350 },
+                      { speciesId: '2', speciesName: 'Pine', count: 280 },
+                      { speciesId: '3', speciesName: 'Maple', count: 200 },
+                    ],
+                    date: '2025-01-01',
+                  },
+                  {
+                    year: 2026,
+                    speciesData: [
+                      { speciesId: '1', speciesName: 'Oak', count: 450 },
+                      { speciesId: '2', speciesName: 'Pine', count: 320 },
+                      { speciesId: '3', speciesName: 'Maple', count: 280 },
+                      { speciesId: '4', speciesName: 'Birch', count: 150 },
+                      { speciesId: '5', speciesName: 'Cedar', count: 100 },
+                    ],
+                    date: '2026-01-01',
+                  },
+                ]}
+              />
             </section>
           </div>
 

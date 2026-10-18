@@ -6,6 +6,7 @@ import {
   getAdminView,
   getOrgScopedView,
   listPartnerOrgs,
+  removePartnerOrg,
   submitZoneEntry,
 } from '@/lib/api/projectCollaboration';
 
@@ -14,7 +15,7 @@ import {
  *
  * GET  ?orgId=…&adminAddress=…  → org-scoped view (only that org's zones) or
  *                                admin view (everything) (AC2)
- * POST { action: 'add_org' | 'assign_zones' | 'submit_entry', … } (AC1/AC2)
+ * POST { action: 'add_org' | 'remove_org' | 'assign_zones' | 'submit_entry', … } (AC1/AC2)
  */
 
 const json = (body: unknown, status = 200) =>
@@ -76,6 +77,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             result.error === 'project_not_found' ? 404 : 403
           );
     }
+    case 'remove_org': {
+      if (!body.actorAddress) return json({ error: 'actorAddress is required' }, 400);
+      const result = removePartnerOrg(id, body.orgId ?? '', body.actorAddress);
+      return result.ok
+        ? json({ org: result.value })
+        : json(
+            { error: result.message, code: result.error },
+            result.error === 'project_not_found'
+              ? 404
+              : result.error === 'not_project_admin'
+                ? 403
+                : 400
+          );
+    }
     case 'assign_zones': {
       if (!body.actorAddress) return json({ error: 'actorAddress is required' }, 400);
       const result = assignZones(
@@ -106,6 +121,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           );
     }
     default:
-      return json({ error: 'action must be one of: add_org, assign_zones, submit_entry' }, 400);
+      return json(
+        { error: 'action must be one of: add_org, remove_org, assign_zones, submit_entry' },
+        400
+      );
   }
 }

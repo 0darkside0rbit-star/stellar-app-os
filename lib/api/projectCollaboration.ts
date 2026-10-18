@@ -129,6 +129,31 @@ export function listPartnerOrgs(projectId: string): PartnerOrg[] {
   return store.get(projectId)?.orgs ?? [];
 }
 
+/**
+ * AC1 — the project admin can also remove a co-managing organisation.
+ * The org's planting zones are released back to the pool and its data-entry
+ * records are discarded (export the unified report first if they must be kept).
+ */
+export function removePartnerOrg(
+  projectId: string,
+  orgId: string,
+  actorAddress: string
+): CollaborationResult<PartnerOrg> {
+  const project = store.get(projectId);
+  if (!project) return fail('project_not_found', 'Project not found');
+  if (!sameActor(actorAddress, project.adminAddress)) {
+    return fail('not_project_admin', 'Only the project admin can remove co-managing organisations');
+  }
+  const index = project.orgs.findIndex((entry) => entry.id === orgId);
+  if (index === -1) return fail('org_not_found', 'Organisation not found in this project');
+  const [removed] = project.orgs.splice(index, 1);
+  for (const zone of project.zones) {
+    if (zone.assignedOrgId === orgId) zone.assignedOrgId = null;
+  }
+  project.entries = project.entries.filter((entry) => entry.orgId !== orgId);
+  return { ok: true, value: removed };
+}
+
 // ── AC2: zone assignment and org-scoped data entry ───────────────────────────
 
 export function assignZones(

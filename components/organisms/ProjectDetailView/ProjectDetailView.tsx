@@ -33,8 +33,8 @@ import {
 import { ProjectCarousel } from '@/components/organisms/ProjectCarousel/ProjectCarousel';
 import { BiodiversityIndex } from '@/components/organisms/BiodiversityIndex/BiodiversityIndex';
 import { ProjectPlanters } from '@/components/organisms/ProjectPlanters';
-import { BiodiversityIndex } from '@/components/organisms/BiodiversityIndex/BiodiversityIndex';
-import type { SpeciesCount, AnnualCensusData } from '@/lib/biodiversity/shannon-index';
+import { FundAllocationTransparency } from '@/components/organisms/FundAllocationTransparency';
+import { NativeSpeciesTransparency } from '@/components/organisms/NativeSpeciesTransparency';
 
 import { mockCarbonProjects } from '@/lib/api/mock/carbonProjects';
 import { toast } from 'sonner';
@@ -291,6 +291,14 @@ export function ProjectDetailView({ adminProject, carbonProject }: ProjectDetail
                   },
                 ]}
               />
+            </section>
+            <section id="transparency" className="space-y-8">
+              <Text variant="h3" className="mb-6 font-bold flex items-center gap-2">
+                Transparency
+                <div className="h-px bg-stellar-blue/20 flex-1 ml-4" />
+              </Text>
+              <FundAllocationTransparency projectId={adminProject.id} />
+              <NativeSpeciesTransparency />
             </section>
           </div>
 

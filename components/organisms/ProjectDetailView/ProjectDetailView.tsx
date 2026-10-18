@@ -31,6 +31,7 @@ import {
   type Milestone,
 } from '@/components/organisms/ProjectTimeline/ProjectTimeline';
 import { ProjectCarousel } from '@/components/organisms/ProjectCarousel/ProjectCarousel';
+import { BiodiversityIndex } from '@/components/organisms/BiodiversityIndex/BiodiversityIndex';
 import { ProjectPlanters } from '@/components/organisms/ProjectPlanters';
 import { BiodiversityIndex } from '@/components/organisms/BiodiversityIndex/BiodiversityIndex';
 import type { SpeciesCount, AnnualCensusData } from '@/lib/biodiversity/shannon-index';

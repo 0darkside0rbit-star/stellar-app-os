@@ -173,3 +173,98 @@ model BulkPurchaseOrder {
   @@index([orderedAt])
   @@map("bulk_purchase_orders")
 }
+
+// ── Auction ─────────────────────────────────────────────────────────────────
+//
+// Farmer-run auctions allowing carbon credits to be sold to multiple buyers
+// via competitive bidding. Highest bid at close wins; transparent price
+// discovery (Issue #1280).
+//
+// Schema is for documentation; production uses raw SQL migrations (see note above).
+model Auction {
+  id                 String    @id @default(cuid())
+  sellerId           String    @map("seller_id")
+  projectId          String    @map("project_id")
+  quantity           Float     @db.DoublePrecision
+  reservePricePerTon Float     @map("reserve_price_per_ton") @db.DoublePrecision
+  startAt            DateTime  @map("start_at")
+  endAt              DateTime  @map("end_at")
+  status             String    @default("draft") @db.VarChar(20) // draft | active | closed | cancelled
+  winningBidId       String?   @map("winning_bid_id")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  @@index([sellerId])
+  @@index([projectId])
+  @@index([status])
+  @@index([startAt, endAt])
+  @@map("auctions")
+}
+
+// ── Bid ─────────────────────────────────────────────────────────────────────
+//
+// Individual bids placed against an auction. Status transitions from active
+// to outbid/won/lost as the auction progresses.
+model Bid {
+  id         String   @id @default(cuid())
+  auctionId  String   @map("auction_id")
+  bidderId   String   @map("bidder_id")
+  pricePerTon Float   @map("price_per_ton") @db.DoublePrecision
+  quantity   Float    @db.DoublePrecision
+  status     String   @default("active") @db.VarChar(20) // active | outbid | won | lost
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([auctionId])
+  @@index([bidderId])
+  @@index([pricePerTon])
+  @@index([status])
+  @@map("bids")
+}
+
+// ── CertificationRecord ─────────────────────────────────────────────────────
+//
+// Certification integration with Verra and Gold Standard platforms
+// (Issue #1286). Tracks external project linkage, verification status and
+// sync state.
+//
+// Schema is for documentation; production uses raw SQL migrations (see note above).
+model CertificationRecord {
+  id                String    @id @default(cuid())
+  projectId         String    @map("project_id")
+  provider          String    @db.VarChar(50) // verra | gold_standard
+  externalProjectId String    @map("external_project_id") @db.VarChar(100)
+  verificationStatus String   @default("pending") @map("verification_status") @db.VarChar(30) // pending | verified | rejected | expired
+  lastSyncedAt      DateTime? @map("last_synced_at")
+  renewalDueDate    DateTime? @map("renewal_due_date")
+  renewalSubmittedAt DateTime? @map("renewal_submitted_at")
+  renewalReviewedAt DateTime? @map("renewal_reviewed_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([projectId])
+  @@index([provider])
+  @@index([verificationStatus])
+  @@index([renewalDueDate])
+  @@map("certification_records")
+}
+
+// ── RenewalDocument ─────────────────────────────────────────────────────────
+//
+// Documents attached to a certification renewal (Issue #1286). Stores
+// metadata for files managed by the certification integration.
+model RenewalDocument {
+  id                     String   @id @default(cuid())
+  certificationRecordId  String   @map("certification_record_id")
+  fileName               String   @map("file_name") @db.VarChar(255)
+  fileUrl                String   @map("file_url") @db.Text
+  mimeType               String?  @map("mime_type") @db.VarChar(100)
+  fileSizeBytes          Int?     @map("file_size_bytes")
+  documentType           String   @map("document_type") @db.VarChar(50) // verification_report | renewal_form | supporting_evidence
+  uploadedAt             DateTime @default(now()) @map("uploaded_at")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  @@index([certificationRecordId])
+  @@index([documentType])
+  @@map("renewal_documents")
+}

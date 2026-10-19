@@ -173,3 +173,47 @@ model BulkPurchaseOrder {
   @@index([orderedAt])
   @@map("bulk_purchase_orders")
 }
+
+// ── CharityPartner ──────────────────────────────────────────────────────────
+//
+// Charities and NGOs that partner with the platform (Issue #1705). Each partner
+// is identified by a unique charity code used on fundraising pages and can be
+// linked to co-branded campaigns via the campaign slug.
+//
+// Schema is for documentation; production uses raw SQL migrations (see note above).
+model CharityPartner {
+  id           String   @id @default(cuid())
+  name         String   @db.VarChar(200)
+  logoUrl      String?  @map("logo_url") @db.Text
+  charityCode  String   @unique @map("charity_code") @db.VarChar(50)
+  contactEmail String   @map("contact_email") @db.VarChar(320)
+  status       String   @default("pending") @db.VarChar(20) // pending | approved | rejected | suspended
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  impactReports CharityImpactReport[]
+
+  @@index([status])
+  @@index([charityCode])
+  @@map("charity_partners")
+}
+
+// ── CharityImpactReport ─────────────────────────────────────────────────────
+//
+// Shared impact reports for co-branded charity campaigns (Issue #1705).
+// Reports are downloadable by both the platform and the charity partner.
+// Campaigns are related to charity partners by campaign slug.
+model CharityImpactReport {
+  id              String   @id @default(cuid())
+  campaignSlug    String   @map("campaign_slug") @db.VarChar(200)
+  charityPartnerId String   @map("charity_partner_id")
+  generatedAt     DateTime @default(now()) @map("generated_at")
+  reportUrl       String   @map("report_url") @db.Text
+
+  charityPartner  CharityPartner @relation(fields: [charityPartnerId], references: [id], onDelete: Cascade)
+
+  @@index([campaignSlug])
+  @@index([charityPartnerId])
+  @@index([generatedAt])
+  @@map("charity_impact_reports")
+}

@@ -21,6 +21,14 @@ export interface Campaign {
   matchCapUsd: number;
   sponsors: CampaignSponsor[];
   endsAt: string;
+  /** Name of the charity or NGO partnering on this campaign. */
+  charityName?: string;
+  /** URL of the charity's logo, used on co-branded campaign pages. */
+  charityLogoUrl?: string;
+  /** Unique charity code used to resolve charity-code fundraising pages. */
+  charityCode?: string;
+  /** Short description of the charity partner and its mission. */
+  charityDescription?: string;
 }
 
 export const CAMPAIGNS: Campaign[] = [
@@ -40,6 +48,11 @@ export const CAMPAIGNS: Campaign[] = [
     matchCapUsd: 125000,
     sponsors: [{ name: 'BlueRiver Energy', matchMultiplier: 2 }],
     endsAt: '2027-03-01T00:00:00Z',
+    charityName: 'Mangrove Guardians Alliance',
+    charityLogoUrl: '/charities/mangrove-guardians-alliance.svg',
+    charityCode: 'MANGROVE',
+    charityDescription:
+      'A coalition of coastal communities restoring and defending mangrove ecosystems across the Niger Delta.',
   },
   {
     slug: 'protect-the-cloud-forest',
@@ -60,11 +73,28 @@ export const CAMPAIGNS: Campaign[] = [
       { name: 'Northwind Capital', matchMultiplier: 3 },
     ],
     endsAt: '2027-05-15T00:00:00Z',
+    charityName: 'Cloud Forest Trust',
+    charityLogoUrl: '/charities/cloud-forest-trust.svg',
+    charityCode: 'CLOUD',
+    charityDescription:
+      'A community-led trust protecting montane cloud forests and the watersheds they sustain in Cameroon.',
   },
 ];
 
 export function getCampaign(slug: string): Campaign | undefined {
   return CAMPAIGNS.find((c) => c.slug === slug);
+}
+
+/** Resolve a campaign by its charity partner code (case-insensitive). */
+export function getCampaignByCharityCode(code: string): Campaign | undefined {
+  const normalized = code.trim().toLowerCase();
+  if (!normalized) return undefined;
+  return CAMPAIGNS.find((c) => c.charityCode?.toLowerCase() === normalized);
+}
+
+/** All campaigns that have a charity partner attached. */
+export function getCharityCampaigns(): Campaign[] {
+  return CAMPAIGNS.filter((c) => Boolean(c.charityCode));
 }
 
 /** Matched funding contributed by corporate sponsors for the current donations. */

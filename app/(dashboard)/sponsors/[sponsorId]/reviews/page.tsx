@@ -6,6 +6,21 @@ import { ReviewForm } from '@/app/components/reviews/ReviewForm';
 import { ReviewCard } from '@/app/components/reviews/ReviewCard';
 import { TeamReviewSummary } from '@/app/components/reviews/TeamReviewSummary';
 import { Review, ReviewSummary } from '@/lib/types/review';
+import { CarbonOffsetCalculator } from '@/app/components/carbon/CarbonOffsetCalculator';
+import { OffsetProjectSearch } from '@/app/components/carbon/OffsetProjectSearch';
+import { ProjectComparisonTool } from '@/app/components/carbon/ProjectComparisonTool';
+import { OffsetProjectFilters } from '@/lib/types/offsetProject';
+
+interface OwnershipRecord {
+  id: string;
+  treeOrBatchId: string;
+  fromUserId: string | null;
+  toUserId: string;
+  transactionHash: string;
+  ledger: number;
+  eventType: 'sponsorship' | 'transfer';
+  timestamp: string;
+}
 
 export default function SponsorReviewsPage() {
   const params = useParams();
@@ -15,6 +30,18 @@ export default function SponsorReviewsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [showProjectSearch, setShowProjectSearch] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
+  const [projectFilters, setProjectFilters] = useState<OffsetProjectFilters>({});
+  const [ownershipHistory, setOwnershipHistory] = useState<OwnershipRecord[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [transferToUserId, setTransferToUserId] = useState('');
+  const [treeOrBatchId, setTreeOrBatchId] = useState('');
+  const [transferring, setTransferring] = useState(false);
+  const [transferError, setTransferError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchReviews();
@@ -36,6 +63,63 @@ export default function SponsorReviewsPage() {
     }
   };
 
+  const fetchOwnershipHistory = async () => {
+    try {
+      setHistoryLoading(true);
+      setHistoryError(null);
+      const query = treeOrBatchId ? `treeOrBatchId=${encodeURIComponent(treeOrBatchId)}` : `sponsorId=${encodeURIComponent(sponsorId)}`;
+      const response = await fetch(`/api/blockchain/ownership?${query}`);
+      if (!response.ok) throw new Error('Failed to fetch ownership history');
+      const data = await response.json();
+      setOwnershipHistory(data.records ?? []);
+    } catch (error) {
+      console.error('Error fetching ownership history:', error);
+      setHistoryError('Unable to load blockchain ownership history.');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleToggleHistory = async () => {
+    const next = !showHistory;
+    setShowHistory(next);
+    if (next && ownershipHistory.length === 0) {
+      await fetchOwnershipHistory();
+    }
+  };
+
+  const handleTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!treeOrBatchId || !transferToUserId) {
+      setTransferError('Provide both the tree/batch ID and the recipient user ID.');
+      return;
+    }
+    try {
+      setTransferring(true);
+      setTransferError(null);
+      const response = await fetch('/api/blockchain/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          treeOrBatchId: treeOrBatchId.trim(),
+          fromUserId: sponsorId,
+          toUserId: transferToUserId.trim(),
+        }),
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error ?? 'Failed to record transfer on Stellar');
+      }
+      setTransferToUserId('');
+      await fetchOwnershipHistory();
+    } catch (error) {
+      console.error('Error recording transfer:', error);
+      setTransferError((error as Error).message || 'Unable to record transfer.');
+    } finally {
+      setTransferring(false);
+    }
+  };
+
   const handleSubmit = async (data: any) => {
     try {
       setSubmitting(true);
@@ -51,7 +135,7 @@ export default function SponsorReviewsPage() {
       await fetchReviews();
     } catch (error) {
       console.error('Error submitting review:', error);
-      alert('Failed to submit review. Please try again.');
+      alert('Failed to submit review. Please try again');
     } finally {
       setSubmitting(false);
     }
@@ -66,7 +150,7 @@ export default function SponsorReviewsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
+    <div className="max-w-6xl mx-auto p-6 space-y-8">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Planting Team Reviews</h1>
         <button
@@ -76,6 +160,145 @@ export default function SponsorReviewsPage() {
           {showForm ? 'Cancel' : 'Write Review'}
         </button>
       </div>
+
+      <div className="flex justify-end gap-3 flex-wrap">
+        <button
+          onClick={handleToggleHistory}
+          className="px-4 py-2 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+        >
+          {showHistory ? 'Hide Blockchain Ledger' : 'View Blockchain Ownership Ledger'}
+        </button>
+        <button
+          onClick={() => setShowComparison(!showComparison)}
+          className="px-4 py-2 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+        >
+          {showComparison ? 'Hide Project Comparison' : 'Compare Offset Projects'}
+        </button>
+        <button
+          onClick={() => setShowProjectSearch(!showProjectSearch)}
+          className="px-4 py-2 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+        >
+          {showProjectSearch ? 'Hide Project Search' : 'Search Offset Projects'}
+        </button>
+        <button
+          onClick={() => setShowCalculator(!showCalculator)}
+          className="px-4 py-2 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+        >
+          {showCalculator ? 'Hide Carbon Calculator' : 'Calculate My Carbon Offset'}
+        </button>
+      </div>
+
+      {showHistory && (
+        <section className="rounded-lg border border-gray-200 bg-white p-6 space-4">
+          <div className="flex flex-col md:flex-row md:items-end gap-3">
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold text-gray-900">Stellar Ownership Ledger</h2>
+              <p className="text-sm text-gray-500">Immutable sponsorship and transfer records recorded on-chain.</p>
+            </div>
+            <div className="flex gap-2 items-end">
+              <label className="text-sm text-gray-700" htmlFor="ownership-tree-id">
+                Tree/Batch ID
+              </label>
+              <input
+                id="ownership-tree-id"
+                value={treeOrBatchId}
+                onChange={(e) => setTreeOrBatchId(e.target.value)}
+                placeholder="Filter by tree or batch"
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+              />
+              <button
+                onClick={fetchOwnershipHistory}
+                className="rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700"
+              >
+                Refresh
+              </button>
+            </div>
+          </div>
+
+          {historyError && (
+            <p className="text-sm text-red-600">{historyError}</p>
+          )}
+
+          {historyLoading ? (
+            <p className="text-sm text-gray-500">Loading on-chain records...</p>
+          ) : ownershipHistory.length === 0 ? (
+            <p className="text-sm text-gray-500">No blockchain records found yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="border-b border-gray-200 text-xs uppercase text-gray-500">
+                  <tr>
+                    <th>Ledge</th>
+                    <th>Event</th>
+                    <th>Tree/Batch</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Transaction Hash</th>
+                    <th>Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ownershipHistory.map((record) => (
+                    <tr key={record.id} className="border-b border-gray-100">
+                      <td className="py-2">{record.ledger}</td>
+                      <td className="py-2 capitalize">{record.eventType}</td>
+                      <td className="py-2 font-mono text-xs">{record.treeOrBatchId}</td>
+                      <td className="py-2 font-mono text-xs">{record.fromUserId ?? '—'}</td>
+                      <td className="py-2 font-mono texe-xs">{record.toUserId}</td>
+                      <td className="py-2 font-mono texe-xs">
+                        <a className="text-green-700 hover:underline" href={`https://stellar.org/explorer/tx/${record.transactionHash}`} target="_blank" rel="noreferrer noopener">
+                          {record.transactionHash}
+                        </a>
+                      </td>
+                      <td className="py-2 text-xs text-gray-600">{new Date(record.timestamp).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <form onSubmit={handleTransfer} className="flex flex-col md:flex-row md:items-end gap-3 border-t border-gray-200 pt-4">
+            <div className="flex-1">
+              <label className="text-sm text-gray-700" htmlFor="transfer-tree-id">Tree/Batch ID</label>
+              <input
+                id="transfer-tree-id"
+                value={treeOrBatchId}
+                onChange={(e) => setTreeOrBatchId(e.target.value)}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-sm text-gray-700" htmlFor="transfer-to-user">Recipient User ID</label>
+              <input
+                id="transfer-to-user"
+                value={transferToUserId}
+                onChange={(e) => setTransferToUserId(e.target.value)}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={transferring}
+              className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+            >
+              {transferring ? 'Recording...' : 'Record Transfer'}
+            </button>
+          </form>
+          {transferError && <p className="text-sm text-red-600">{transferError}</p>}
+        </section>
+      )}
+
+      {showComparison && <ProjectComparisonTool />}
+
+      {showProjectSearch && (
+        <OffsetProjectSearch
+          filters={projectFilters}
+          onFiltersChange={setProjectFilters}
+        />
+      )}
+
+      {showCalculator && <CarbonOffsetCalculator />}
 
       {summary && <TeamReviewSummary summary={summary} />}
 

@@ -80,7 +80,7 @@ export async function GET(request: Request) {
       SELECT COUNT(DISTINCT pu.id) as total
       FROM progress_updates pu
       INNER JOIN trees t ON pu.tree_id = t.id
-      LEFT JOIN planters p ON t.planter_id = p.id
+      LEFT JOIN planters p ON t….planter_id = p.id
       LEFT JOIN photo_hashes ph ON ph.entity_type = 'tree' 
         AND ph.entity_id = t.tree_ref
         AND ph.storage_ref = pu.media_url
@@ -127,7 +127,7 @@ export async function GET(request: Request) {
         AND ph.storage_ref = pu.media_url
       WHERE ${whereClause}
         AND pu.media_url IS NOT NULL
-        AND t.deleted_at IS NULL
+        AND t….deleted_at IS NULL
       ORDER BY 
         CASE WHEN ph.duplicate_of IS NOT NULL THEN 0 ELSE 1 END,
         pu.created_at DESC
@@ -136,12 +136,15 @@ export async function GET(request: Request) {
 
     params.push(limit, offset);
 
-    const photosResult = await pool.query<VerificationPhoto>(photosQuery, params);
+    const photosResult = await pool.query<VerificationPhoto>(
+      photosQuery,
+      params
+    );
 
     // Get filter options
     const regionsQuery = `
       SELECT DISTINCT region FROM trees 
-      WHERE deleted_at IS NULL 
+      WHERE deleted_at IS NULL
       ORDER BY region
     `;
     const regionsResult = await pool.query(regionsQuery);

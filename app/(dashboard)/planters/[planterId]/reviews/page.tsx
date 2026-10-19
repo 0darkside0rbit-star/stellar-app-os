@@ -5,6 +5,9 @@ import { useParams } from 'next/navigation';
 import { ReviewCard } from '@/app/components/reviews/ReviewCard';
 import { TeamReviewSummary } from '@/app/components/reviews/TeamReviewSummary';
 import { Review, ReviewSummary } from '@/lib/types/review';
+import { CarbonOffsetCalculator } from '@/app/components/carbon/CarbonOffsetCalculator';
+import { ProjectComparison } from '@/app/components/reviews/ProjectComparison';
+import { ProjectComparisonItem } from '@/lib/types/projectComparison';
 
 export default function PlanterReviewsPage() {
   const params = useParams();
@@ -12,9 +15,16 @@ export default function PlanterReviewsPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [comparisonItems, setComparisonItems] = useState<ProjectComparisonItem[]>([]);
+  const [comparisonLoading, setComparisonLoading] = useState(true);
+  const [comparisonError, setComparisonError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchReviews();
+  }, [planterId]);
+
+  useEffect(() => {
+    fetchComparison();
   }, [planterId]);
 
   const fetchReviews = async () => {
@@ -33,6 +43,23 @@ export default function PlanterReviewsPage() {
     }
   };
 
+  const fetchComparison = async () => {
+    try {
+      setComparisonLoading(true);
+      setComparisonError(null);
+      const response = await fetch(`/api/projects/compare?planterId=${planterId}`);
+      if (!response.ok) throw new Error('Failed to fetch comparison data');
+
+      const data = await response.json();
+      setComparisonItems(data.projects ?? []);
+    } catch (error) {
+      console.error('Error fetching comparison data:', error);
+      setComparisonError('Unable to load project comparison data.');
+    } finally {
+      setComparisonLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -46,6 +73,14 @@ export default function PlanterReviewsPage() {
       <h1 className="text-2xl font-bold text-gray-900">Your Reviews</h1>
 
       {summary && <TeamReviewSummary summary={summary} />}
+
+      <CarbonOffsetCalculator />
+
+      <ProjectComparison
+        items={comparisonItems}
+        loading={comparisonLoading}
+        error={comparisonError}
+      />
 
       <div className="space-y-4">
         {reviews.length === 0 ? (

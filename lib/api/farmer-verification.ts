@@ -132,7 +132,7 @@ export interface FarmerVerificationCredit {
 
 export interface FarmerVerificationReport {
   farmerAddress: string;
-  apiVersion: 'v2';
+  apiVersion: 'v1' | 'v2';
   /** On-chain vocabulary: approved → verified, open → pending, plus rejected/expired. */
   verificationStatus: 'verified' | 'pending' | 'rejected' | 'expired';
   /** Overall: true only once the application has been approved. */
@@ -256,7 +256,7 @@ export function evaluateCredit(
   };
 }
 
-function buildReport(row: VerificationRow): FarmerVerificationReport {
+function buildReport(row: VerificationRow, apiVersion: 'v1' | 'v2'): FarmerVerificationReport {
   const status = row.status as KycApplicationStatus;
   const screening = asScreening(row.screening, row.updated_at);
   const activeSanctions = row.active_sanctions ?? [];
@@ -265,7 +265,7 @@ function buildReport(row: VerificationRow): FarmerVerificationReport {
 
   return {
     farmerAddress: row.farmer_address,
-    apiVersion: 'v2',
+    apiVersion,
     verificationStatus: toOnChainKycStatus(status),
     verified: status === 'approved',
     identity: {
@@ -313,7 +313,8 @@ const SELECT_VERIFICATION_COLUMNS = `
  */
 export async function getFarmerVerification(
   db: FarmerVerificationDb,
-  farmerAddress: string
+  farmerAddress: string,
+  apiVersion: 'v1' | 'v2' = 'v2'
 ): Promise<FarmerVerificationLookup> {
   const { rows } = await db.query<VerificationRow>(
     `SELECT ${SELECT_VERIFICATION_COLUMNS}
@@ -328,7 +329,7 @@ export async function getFarmerVerification(
   if (!row) return { ok: false, reason: 'not_found' };
   if (!row.consent_granted) return { ok: false, reason: 'consent_denied' };
 
-  return { ok: true, report: buildReport(row) };
+  return { ok: true, report: buildReport(row, apiVersion) };
 }
 
 /**
@@ -339,14 +340,34 @@ export async function getFarmerVerification(
  */
 export async function verifyFarmers(
   db: FarmerVerificationDb,
-  addresses: readonly string[]
+  addresses: readonly string[],
+  apiVersion: 'v1' | 'v2' = 'v2'
 ): Promise<FarmerVerificationBatch> {
-  const outcomes = await Promise.all(
-    addresses.map(async (address) => ({
-      address,
-      outcome: await getFarmerVerification(db, address),
-    }))
+  if (addresses.length === 0) {
+    return {
+      requested: 0,
+      count: 0,
+      verified: 0,
+      reports: [],
+      notFound: [],
+      consentDenied: [],
+    };
+  }
+
+  // Fetch a portfolio in one round trip. DISTINCT ON applies the same
+  // precedence as the single-farmer lookup: prefer an approved application,
+  // otherwise use the newest application for that farmer.
+  const { rows } = await db.query<VerificationRow>(
+    `SELECT DISTINCT ON (farmer_address) ${SELECT_VERIFICATION_COLUMNS}
+       FROM farmer_kyc_applications
+      WHERE farmer_address = ANY($1::text[])
+      ORDER BY farmer_address,
+               CASE WHEN status = 'approved' THEN 0 ELSE 1 END,
+               submitted_at DESC`,
+    [addresses]
   );
+
+  const rowsByAddress = new Map(rows.map((row) => [row.farmer_address, row]));
 
   const batch: FarmerVerificationBatch = {
     requested: addresses.length,
@@ -357,15 +378,21 @@ export async function verifyFarmers(
     consentDenied: [],
   };
 
-  for (const { address, outcome } of outcomes) {
-    if (!outcome.ok) {
-      if (outcome.reason === 'consent_denied') batch.consentDenied.push(address);
-      else batch.notFound.push(address);
+  for (const address of addresses) {
+    const row = rowsByAddress.get(address);
+    if (!row) {
+      batch.notFound.push(address);
       continue;
     }
-    batch.reports.push(outcome.report);
+    if (!row.consent_granted) {
+      batch.consentDenied.push(address);
+      continue;
+    }
+
+    const report = buildReport(row, apiVersion);
+    batch.reports.push(report);
     batch.count += 1;
-    if (outcome.report.verified) batch.verified += 1;
+    if (report.verified) batch.verified += 1;
   }
 
   return batch;
@@ -401,9 +428,7 @@ export function parseVerificationAddresses(body: unknown): AddressParseResult {
   const addresses: string[] = [];
   raw.forEach((value, index) => {
     if (!isStellarAddress(value)) {
-      errors.push(
-        `addresses[${index}] must be a 56-character Stellar public key starting with G.`
-      );
+      errors.push(`addresses[${index}] must be a 56-character Stellar public key starting with G.`);
       return;
     }
     const normalised = (value as string).trim();

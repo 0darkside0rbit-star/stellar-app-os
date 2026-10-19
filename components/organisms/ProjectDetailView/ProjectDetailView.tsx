@@ -21,6 +21,7 @@ import { Text } from '@/components/atoms/Text';
 import { Badge } from '@/components/atoms/Badge';
 import { Card } from '@/components/molecules/Card';
 import { FarmPlotSatelliteView } from '@/components/organisms/FarmPlotSatelliteView/FarmPlotSatelliteView';
+import { ProjectCollaborationDashboard } from '@/components/organisms/ProjectDetailView/ProjectCollaborationDashboard';
 import {
   ImpactMetrics,
   type ImpactMetric,
@@ -30,8 +31,10 @@ import {
   type Milestone,
 } from '@/components/organisms/ProjectTimeline/ProjectTimeline';
 import { ProjectCarousel } from '@/components/organisms/ProjectCarousel/ProjectCarousel';
+import { BiodiversityIndex } from '@/components/organisms/BiodiversityIndex/BiodiversityIndex';
 import { ProjectPlanters } from '@/components/organisms/ProjectPlanters';
-import { ProjectProtectionImpact } from '@/components/organisms/SponsorImpact/ProjectProtectionImpact';
+import { FundAllocationTransparency } from '@/components/organisms/FundAllocationTransparency';
+import { NativeSpeciesTransparency } from '@/components/organisms/NativeSpeciesTransparency';
 
 import { mockCarbonProjects } from '@/lib/api/mock/carbonProjects';
 import { toast } from 'sonner';
@@ -245,6 +248,65 @@ export function ProjectDetailView({ adminProject, carbonProject }: ProjectDetail
             <section id="planters">
               <ProjectPlanters projectId={adminProject.id} projectName={adminProject.name} />
             </section>
+
+            {/* Issue #1693: Forest Biodiversity Index */}
+            <section id="biodiversity">
+              <Text variant="h3" className="mb-6 font-bold flex items-center gap-2">
+                Biodiversity Index
+                <div className="h-px bg-stellar-blue/20 flex-1 ml-4" />
+              </Text>
+              <BiodiversityIndex
+                currentSpecies={[
+                  { speciesId: '1', speciesName: 'Oak', count: 450 },
+                  { speciesId: '2', speciesName: 'Pine', count: 320 },
+                  { speciesId: '3', speciesName: 'Maple', count: 280 },
+                  { speciesId: '4', speciesName: 'Birch', count: 150 },
+                  { speciesId: '5', speciesName: 'Cedar', count: 100 },
+                ]}
+                baselineSpecies={[
+                  { speciesId: '1', speciesName: 'Oak', count: 200 },
+                  { speciesId: '2', speciesName: 'Pine', count: 150 },
+                ]}
+                annualCensus={[
+                  {
+                    year: 2024,
+                    speciesData: [
+                      { speciesId: '1', speciesName: 'Oak', count: 200 },
+                      { speciesId: '2', speciesName: 'Pine', count: 150 },
+                    ],
+                    date: '2024-01-01',
+                  },
+                  {
+                    year: 2025,
+                    speciesData: [
+                      { speciesId: '1', speciesName: 'Oak', count: 350 },
+                      { speciesId: '2', speciesName: 'Pine', count: 280 },
+                      { speciesId: '3', speciesName: 'Maple', count: 200 },
+                    ],
+                    date: '2025-01-01',
+                  },
+                  {
+                    year: 2026,
+                    speciesData: [
+                      { speciesId: '1', speciesName: 'Oak', count: 450 },
+                      { speciesId: '2', speciesName: 'Pine', count: 320 },
+                      { speciesId: '3', speciesName: 'Maple', count: 280 },
+                      { speciesId: '4', speciesName: 'Birch', count: 150 },
+                      { speciesId: '5', speciesName: 'Cedar', count: 100 },
+                    ],
+                    date: '2026-01-01',
+                  },
+                ]}
+              />
+            </section>
+            <section id="transparency" className="space-y-8">
+              <Text variant="h3" className="mb-6 font-bold flex items-center gap-2">
+                Transparency
+                <div className="h-px bg-stellar-blue/20 flex-1 ml-4" />
+              </Text>
+              <FundAllocationTransparency projectId={adminProject.id} />
+              <NativeSpeciesTransparency />
+            </section>
           </div>
 
           {/* Sidebar */}
@@ -324,6 +386,12 @@ export function ProjectDetailView({ adminProject, carbonProject }: ProjectDetail
             </Card>
           </aside>
         </div>
+
+        {/* Multi-organisation collaboration dashboard (#1696) */}
+        <ProjectCollaborationDashboard
+          projectId={adminProject.id}
+          projectName={adminProject.name}
+        />
 
         {/* Related Projects */}
         <section className="mt-24">

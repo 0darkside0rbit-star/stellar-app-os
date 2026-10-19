@@ -99,6 +99,34 @@ const DEFAULT_TOAST_DURATION = 5000;
 const MIN_TOAST_DURATION = 2000;
 const MAX_TOAST_DURATION = 10000;
 
+const NEWSLETTER_OPT_IN_STORAGE_KEY = 'sponsor.newsletterOptIn';
+
+function readStoredNewsletterOptIn(): boolean {
+  if (typeof window === 'undefined') {
+    return true;
+  }
+  try {
+    const stored = window.localStorage.getItem(NEWSLETTER_OPT_IN_STORAGE_KEY);
+    if (stored === null) {
+      return true;
+    }
+    return stored === 'true';
+  } catch {
+    return true;
+  }
+}
+
+function persistNewsletterOptIn(value: boolean): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    window.localStorage.setItem(NEWSLETTER_OPT_IN_STORAGE_KEY, String(value));
+  } catch {
+    // Ignore storage failures (e.g. private mode or quota exceeded).
+  }
+}
+
 export function normalizeToastDuration(duration?: number): number {
   if (duration === undefined || Number.isNaN(duration)) {
     return DEFAULT_TOAST_DURATION;
@@ -117,6 +145,7 @@ export function NotificationProvider({ children }: { children: ReactNode }): Rea
   const [notifications, setNotifications] = useState<Notification[]>(defaultNotifications);
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [newsletterOptIn, setNewsletterOptInState] = useState<boolean>(readStoredNewsletterOptIn);
 
   const unreadCount = useMemo(
     () => notifications.filter((n) => !n.read && !n.archived).length,
@@ -171,6 +200,11 @@ export function NotificationProvider({ children }: { children: ReactNode }): Rea
 
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const setNewsletterOptIn = useCallback((value: boolean) => {
+    setNewsletterOptInState(value);
+    persistNewsletterOptIn(value);
   }, []);
 
   const openDrawer = useCallback(() => setIsDrawerOpen(true), []);
@@ -236,6 +270,8 @@ export function NotificationProvider({ children }: { children: ReactNode }): Rea
       clearAll,
       clearRead,
       toast: toastHelpers,
+      newsletterOptIn,
+      setNewsletterOptIn,
     }),
     [
       notifications,
@@ -255,6 +291,8 @@ export function NotificationProvider({ children }: { children: ReactNode }): Rea
       clearAll,
       clearRead,
       toastHelpers,
+      newsletterOptIn,
+      setNewsletterOptIn,
     ]
   );
 

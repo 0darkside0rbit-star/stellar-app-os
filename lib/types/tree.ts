@@ -33,6 +33,14 @@ export interface Tree {
   nftOwner?: string;
   /** Optional evidence image shown on the tree detail page. */
   imageUrl?: string;
+  /** Identifier of the seed batch this tree was grown from. */
+  seedBatchId?: string;
+  /** Name of the seed bank that supplied the seed batch. */
+  seedBankName?: string;
+  /** Free-form provenance notes describing the seed's origin and handling. */
+  provenanceNotes?: string;
+  /** Collection site where the seed was originally gathered. */
+  collectionSite?: string;
 }
 
 export interface TreeFilterState {

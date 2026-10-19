@@ -97,3 +97,109 @@ export function showNotification(title: string, options?: NotificationOptions): 
     });
   });
 }
+
+export type TreeLifecycleNotificationEventType =
+  | 'tree_planted'
+  | 'survival_1_year'
+  | 'milestone_5_year'
+  | 'sponsor_achievement';
+
+export interface TreeLifecycleNotificationEvent {
+  type: TreeLifecycleNotificationEventType;
+  treeId?: string;
+  sponsorId?: string;
+  title: string;
+  body: string;
+  url?: string;
+  achievementId?: string;
+  data?: Record<string, unknown>;
+}
+
+export interface AnnualImpactEmailPayload {
+  sponsorId: string;
+  sponsorName: string;
+  sponsorEmail: string;
+  year: number;
+  treesFunded: number;
+  co2AbsorbedKg: number;
+  speciesDiversity: number;
+  milestones: string[];
+  impactImageUrl?: string;
+}
+
+export interface WaitlistAssignmentEmailPayload {
+  sponsorId: string;
+  sponsorName: string;
+  sponsorEmail: string;
+  zoneId: string;
+  zoneName: string;
+  treeId: string;
+  waitlistPosition?: number;
+}
+
+async function postJson<TResponse = unknown>(
+  endpoint: string,
+  payload: unknown
+): Promise<TResponse | null> {
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      console.error(`Request to ${endpoint} failed with status ${response.status}`);
+      return null;
+    }
+
+    return (await response.json()) as TResponse;
+  } catch (error) {
+    console.error(`Request to ${endpoint} failed:`, error);
+    return null;
+  }
+}
+
+/**
+ * Dispatch a real-time tree lifecycle / sponsor achievement push notification.
+ * Falls back to an in-app notification when push delivery is unavailable.
+ */
+export async function dispatchPushNotification(
+  event: TreeLifecycleNotificationEvent
+): Promise<boolean> {
+  const result = await postJson<{ success?: boolean }>('/api/notifications/push', event);
+
+  if (!result) {
+    showNotification(event.title, {
+      body: event.body,
+      data: { url: event.url, ...event.data },
+    });
+    return false;
+  }
+
+  return result.success !== false;
+}
+
+/**
+ * Send the year-end annual impact summary email for a sponsor.
+ * Intended to be invoked by the December 20 scheduled job.
+ */
+export async function sendAnnualImpactEmail(
+  payload: AnnualImpactEmailPayload
+): Promise<boolean> {
+  const result = await postJson<{ success?: boolean }>('/api/sponsors/annual-impact', payload);
+  return result?.success !== false && result !== null;
+}
+
+/**
+ * Notify a sponsor that a tree has been assigned to them from a zone waitlist.
+ */
+export async function sendWaitlistAssignmentEmail(
+  payload: WaitlistAssignmentEmailPayload
+): Promise<boolean> {
+  const result = await postJson<{ success?: boolean }>(
+    '/api/sponsors/waitlist/notify',
+    payload
+  );
+  return result?.success !== false && result !== null;
+}

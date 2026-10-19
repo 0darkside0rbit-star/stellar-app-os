@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { MyTreesScreen } from './src/screens/MyTreesScreen';
 import { ARTreeViewerScreen } from './src/screens/ARTreeViewerScreen';
@@ -10,6 +11,8 @@ import {
   getBiometricAvailability,
   type BiometricAvailability,
 } from './src/lib/biometrics';
+import { registerForPushNotifications } from './src/lib/notifications';
+import { notify } from './src/lib/toast';
 
 type Tab = 'home' | 'trees' | 'ar' | 'profile';
 
@@ -24,6 +27,7 @@ export default function App() {
   const [availability, setAvailability] = useState<BiometricAvailability>({ available: false });
   const [unlocked, setUnlocked] = useState(false);
   const [tab, setTab] = useState<Tab>('home');
+  const notificationListener = useRef<Notifications.Subscription | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -42,6 +46,32 @@ export default function App() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!unlocked) {
+      return;
+    }
+
+    void registerForPushNotifications();
+
+    notificationListener.current = Notifications.addNotificationReceivedListener(
+      (notification) => {
+        const data = notification.request.content.data ?? {};
+        const title = notification.request.content.title ?? 'FarmCredit Sponsor';
+        const body = notification.request.content.body ?? '';
+        notify(body ? `${title}: ${body}` : title);
+
+        if (typeof data.treeId === 'string' && data.treeId.length > 0) {
+          setTab('trees');
+        }
+      },
+    );
+
+    return () => {
+      notificationListener.current?.remove();
+      notificationListener.current = null;
+    };
+  }, [unlocked]);
 
   if (!unlocked) {
     return (

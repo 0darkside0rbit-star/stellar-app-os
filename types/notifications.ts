@@ -1,5 +1,32 @@
 export type NotificationType =
-  'account_alert' | 'payout' | 'verification' | 'info' | 'warning' | 'error' | 'success';
+  | 'account_alert'
+  | 'payout'
+  | 'verification'
+  | 'info'
+  | 'warning'
+  | 'error'
+  | 'success'
+  | 'tree_planted'
+  | 'tree_survival_1y'
+  | 'tree_milestone_5y'
+  | 'achievement_unlocked';
+
+export type TreeLifecycleEventType =
+  | 'tree_planted'
+  | 'tree_survival_1y'
+  | 'tree_milestone_5y'
+  | 'achievement_unlocked';
+
+export interface TreeLifecycleNotificationEvent {
+  treeId: string;
+  sponsorAddress: string;
+  eventType: TreeLifecycleEventType;
+  milestoneYears?: number;
+  achievementId?: string;
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+}
 
 export type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent';
 

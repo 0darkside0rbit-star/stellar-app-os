@@ -173,3 +173,61 @@ model BulkPurchaseOrder {
   @@index([orderedAt])
   @@map("bulk_purchase_orders")
 }
+
+// ── AnnualImpactEmail ───────────────────────────────────────────────────────
+//
+// Year-in-review impact summary emails sent to sponsors each December (Issue
+// #1712). One row per sponsor per calendar year; the unique constraint makes
+// the year-end job idempotent. Stats are snapshotted at send time so the email
+// content remains reproducible.
+//
+// Schema is for documentation; production uses raw SQL migrations (see note above).
+model AnnualImpactEmail {
+  id              String    @id @default(cuid())
+  sponsorId       String    @map("sponsor_id")
+  sponsorEmail    String    @map("sponsor_email") @db.VarChar(320)
+  year            Int
+  treeCount       Int       @default(0) @map("tree_count")
+  co2Kg           Float     @default(0) @map("co2_kg") @db.DoublePrecision
+  speciesCount    Int       @default(0) @map("species_count")
+  milestonesCount Int       @default(0) @map("milestones_count")
+  impactImageUrl  String?   @map("impact_image_url") @db.Text
+  status          String    @default("pending") @db.VarChar(20) // pending | sent | failed
+  sentAt          DateTime? @map("sent_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@unique([sponsorId, year])
+  @@index([status])
+  @@index([year])
+  @@map("annual_impact_emails")
+}
+
+// ── PlantingWaitlist ────────────────────────────────────────────────────────
+//
+// Sponsors waiting for capacity in an oversubscribed planting zone (Issue
+// #1718). When a zone is at capacity sponsors join the waitlist; the next
+// planting batch assigns trees in `position` order and notifies sponsors by
+// email. A sponsor may hold at most one waiting entry per planting location.
+//
+// Schema is for documentation; production uses raw SQL migrations (see note above).
+model PlantingWaitlist {
+  id                String    @id @default(cuid())
+  sponsorId         String    @map("sponsor_id")
+  sponsorEmail      String    @map("sponsor_email") @db.VarChar(320)
+  sponsorName       String?   @map("sponsor_name") @db.VarChar(200)
+  treeId            String?   @map("tree_id")
+  species           String?   @db.VarChar(100)
+  region            String    @db.VarChar(100)
+  plantingLocationId Int?     @map("planting_location_id")
+  status            String    @default("waiting") @db.VarChar(20) // waiting | assigned | cancelled
+  position          Int       @default(0)
+  assignedAt        DateTime? @map("assigned_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@unique([sponsorId, plantingLocationId])
+  @@index([region, status])
+  @@index([status, position])
+  @@map("planting_waitlist")
+}

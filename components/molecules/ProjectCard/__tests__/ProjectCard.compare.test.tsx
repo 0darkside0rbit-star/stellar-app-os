@@ -49,9 +49,7 @@ describe('ProjectCard compare button', () => {
   });
 
   it('stays enabled for a selected project even when the comparison is full', () => {
-    render(
-      <ProjectCard project={project} isComparing compareDisabled onToggleCompare={vi.fn()} />
-    );
+    render(<ProjectCard project={project} isComparing compareDisabled onToggleCompare={vi.fn()} />);
     expect(screen.getByRole('button', { name: /remove from compare/i })).toBeEnabled();
   });
 });

@@ -229,6 +229,13 @@ export function ProjectDetailView({ adminProject, carbonProject }: ProjectDetail
               </div>
             </section>
 
+            <section id="deforestation-prevention">
+              <ProjectProtectionImpact
+                projectName={adminProject.name}
+                coordinates={carbonProject.coordinates}
+              />
+            </section>
+
             <section id="timeline">
               <Text variant="h3" className="mb-8 font-bold flex items-center gap-2">
                 Project Roadmap

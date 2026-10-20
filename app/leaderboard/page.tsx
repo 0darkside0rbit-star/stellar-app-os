@@ -3,7 +3,12 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { type LeaderboardSponsor, type LeaderboardPlanter, type LeaderboardPeriod, type LeaderboardCategory } from '@/lib/types/leaderboard';
+import {
+  type LeaderboardSponsor,
+  type LeaderboardPlanter,
+  type LeaderboardPeriod,
+  type LeaderboardCategory,
+} from '@/lib/types/leaderboard';
 import {
   fetchLeaderboard as fetchSponsorLeaderboard,
   fetchPlanterLeaderboard,
@@ -19,7 +24,18 @@ import {
   TableRow,
   TableCell,
 } from '@/components/ui/table';
-import { TreePine, Trophy, Loader2, Minus, Sparkles, Gift, Leaf, ChevronUp, ChevronDown, Wallet } from 'lucide-react';
+import {
+  TreePine,
+  Trophy,
+  Loader2,
+  Minus,
+  Sparkles,
+  Gift,
+  Leaf,
+  ChevronUp,
+  ChevronDown,
+  Wallet,
+} from 'lucide-react';
 import Link from 'next/link';
 
 // --- MOCK WALLET CONTEXT ---

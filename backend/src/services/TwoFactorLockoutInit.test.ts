@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
-import { initLockoutStore, createLockoutStore, InMemoryLockoutStore, RedisLockoutStore, type TwoFactorService } from './TwoFactorLockoutInit';
+import {
+  initLockoutStore,
+  createLockoutStore,
+  InMemoryLockoutStore,
+  RedisLockoutStore,
+  type TwoFactorService,
+} from './TwoFactorLockoutInit';
 
 // ---------------------------------------------------------------------------
 // Helpers

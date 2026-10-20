@@ -6,7 +6,6 @@ import {
   type TickerServiceEvent,
 } from '@/lib/ticker/tickerService';
 
-
 describe('lib/ticker/tickerService', () => {
   let service: TickerService;
 

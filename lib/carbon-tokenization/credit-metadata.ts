@@ -1,4 +1,8 @@
-import type { RegistryProtocol, RegistryProjectData, RegistryRetirementData } from '../certification/types';
+import type {
+  RegistryProtocol,
+  RegistryProjectData,
+  RegistryRetirementData,
+} from '../certification/types';
 import { makeTokenId } from './registry-client';
 import { uploadToIpfs } from '../ipfs/upload';
 import fs from 'node:fs';

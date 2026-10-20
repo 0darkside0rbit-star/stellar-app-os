@@ -3,7 +3,11 @@ import {
   storeCreditMetadata,
   type MetadataUploadResult,
 } from './credit-metadata';
-import type { MintedCreditRecord, TokenizationRequest, TokenizationValidationResult } from '../certification/types';
+import type {
+  MintedCreditRecord,
+  TokenizationRequest,
+  TokenizationValidationResult,
+} from '../certification/types';
 import { type CreditValidator } from './credit-validator';
 import type { MintedCreditRepository } from './minted-repository';
 import type { BlockchainMintClient, MintResult } from './evm-client';

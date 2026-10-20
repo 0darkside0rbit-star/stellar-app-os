@@ -1,4 +1,8 @@
-import type { TreeNFTListing, NFTFilterOptions, RoyaltyBreakdown } from '@/lib/types/nft-marketplace';
+import type {
+  TreeNFTListing,
+  NFTFilterOptions,
+  RoyaltyBreakdown,
+} from '@/lib/types/nft-marketplace';
 
 export const DEFAULT_PLATFORM_ROYALTY_PERCENT = 2.5;
 export const DEFAULT_CREATOR_ROYALTY_PERCENT = 5.0;

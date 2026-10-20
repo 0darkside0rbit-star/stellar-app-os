@@ -16,7 +16,24 @@ import type {
   TokenizationRequest,
   TokenizationValidationResult,
 } from '../certification/types';
-import { AlreadyMintedError, CreditTokenizationError, ProjectIdMismatchError, ProjectNotActiveError, ProjectNotFoundError, ProjectStatusUnknownError, ProtocolNotSupportedError, RegistryApiError, RegistryRateLimitedError, RegistryTimeoutError, RetirementNotFoundError, RetirementSerialInvalidError, RetirementStatusInvalidError, TonnageMismatchError, ValidationInternalError, VintageMismatchError } from './errors';
+import {
+  AlreadyMintedError,
+  CreditTokenizationError,
+  ProjectIdMismatchError,
+  ProjectNotActiveError,
+  ProjectNotFoundError,
+  ProjectStatusUnknownError,
+  ProtocolNotSupportedError,
+  RegistryApiError,
+  RegistryRateLimitedError,
+  RegistryTimeoutError,
+  RetirementNotFoundError,
+  RetirementSerialInvalidError,
+  RetirementStatusInvalidError,
+  TonnageMismatchError,
+  ValidationInternalError,
+  VintageMismatchError,
+} from './errors';
 import type { MintedCreditRepository } from './minted-repository';
 import { makeValidationId } from './registry-client';
 import logger from '../logger';

@@ -13,7 +13,13 @@
 import { Leaf, TrendingUp, TrendingDown, Minus, Info } from 'lucide-react';
 import { Text } from '@/components/atoms/Text';
 import { Badge } from '@/components/atoms/Badge';
-import { calculateShannonIndex, compareBiodiversity, calculateBiodiversityTrend, type SpeciesCount, type AnnualCensusData } from '@/lib/biodiversity/shannon-index';
+import {
+  calculateShannonIndex,
+  compareBiodiversity,
+  calculateBiodiversityTrend,
+  type SpeciesCount,
+  type AnnualCensusData,
+} from '@/lib/biodiversity/shannon-index';
 
 interface BiodiversityIndexProps {
   currentSpecies: SpeciesCount[];

@@ -5,7 +5,13 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/atoms/Badge';
 import { Button } from '@/components/atoms/Button';
-import { Card, CardContent, CardDescription, CardFooter, CardTitle } from '@/components/molecules/Card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardTitle,
+} from '@/components/molecules/Card';
 import type { TreeBundle } from '@/lib/types/tree-bundle';
 
 export interface BundleCardProps extends HTMLAttributes<HTMLDivElement> {

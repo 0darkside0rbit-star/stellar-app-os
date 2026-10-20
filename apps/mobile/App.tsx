@@ -17,6 +17,7 @@ export default function App() {
     protectedHectares: 134.1,
     lastSyncedAt: 'cached',
   });
+  
   useEffect(() => {
     void (async () => {
       const cached = await AsyncStorage.getItem('sponsor-portfolio');

@@ -5,12 +5,12 @@
  *
  * Self-contained donation form that lets donors:
  *   1. Select a tree count (minimum 2 trees)
- *   2. Choose payment method: Freighter wallet (XLM/USDC) or credit card (Stripe)
+ *   2. Choose payment method: Freighter wallet (XLM/stablecoins) or credit card (Stripe)
  *   3. Submit and see real-time on-page confirmation
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { Minus, Plus, Trees, CheckCircle, AlertCircle, Wallet, CreditCard } from 'lucide-react';
+import { Minus, Plus, Trees, CheckCircle, AlertCircle, Wallet, CreditCard, MapPin } from 'lucide-react';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { Button } from '@/components/atoms/Button';
@@ -18,11 +18,16 @@ import { Text } from '@/components/atoms/Text';
 import { Badge } from '@/components/atoms/Badge';
 import { LoadingSpinner } from '@/components/atoms/LoadingSpinner/LoadingSpinner';
 import { WalletModal } from '@/components/organisms/WalletModal/WalletModal';
+import { RegionSelectorMap } from '@/components/organisms/RegionSelectorMap/RegionSelectorMap';
 import { useWalletContext } from '@/contexts/WalletContext';
+import type { PlantingRegion } from '@/lib/types/planting-region';
 import { processDonationPayment } from '@/lib/stellar/donation';
 import { generateIdempotencyKey } from '@/lib/constants/donation';
 import { showToast } from '@/lib/toast';
 import type { TransactionStatus } from '@/lib/types/payment';
+import type { DonationAsset } from '@/lib/types/donation-payment';
+import { GiftTreeForm } from '@/components/organisms/GiftTreeForm/GiftTreeForm';
+import { DEFAULT_GIFT_DETAILS, isValidGiftDetails, type GiftDetails } from '@/lib/types/gift';
 
 // 1 tree = 1 USDC / $1 — consistent with TREES_PER_DOLLAR in donation constants
 const USDC_PER_TREE = 1;
@@ -173,7 +178,10 @@ export function TreeDonationForm() {
   const [treeCount, setTreeCount] = useState(MINIMUM_TREES);
   const [customCount, setCustomCount] = useState('');
   const [isCustom, setIsCustom] = useState(false);
+  const [selectedRegion, setSelectedRegion] = useState<PlantingRegion | undefined>();
+  const [showRegionSelector, setShowRegionSelector] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'stellar' | 'card'>('stellar');
+  const [donationAsset, setDonationAsset] = useState<DonationAsset>('USDC');
   const [stellarStatus, setStellarStatus] = useState<TransactionStatus>('idle');
   const [stellarError, setStellarError] = useState<string | null>(null);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
@@ -181,11 +189,13 @@ export function TreeDonationForm() {
   const [txId, setTxId] = useState('');
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
   const [fetchingIntent, setFetchingIntent] = useState(false);
+  const [gift, setGift] = useState<GiftDetails>({ ...DEFAULT_GIFT_DETAILS });
 
   const isProcessingRef = useRef(false);
 
   const resolvedCount = isCustom ? parseInt(customCount, 10) || 0 : treeCount;
   const isValidCount = resolvedCount >= MINIMUM_TREES;
+  const isValidGift = isValidGiftDetails(gift);
   const totalUsdc = resolvedCount * USDC_PER_TREE;
 
   const isStellarProcessing = ['preparing', 'signing', 'submitting', 'confirming'].includes(
@@ -263,7 +273,9 @@ export function TreeDonationForm() {
         totalUsdc,
         wallet,
         generateIdempotencyKey(),
-        (status) => setStellarStatus(status)
+        (status) => setStellarStatus(status),
+        1,
+        donationAsset
       );
       setTxId(result.transactionHash);
       setConfirmed(true);
@@ -276,7 +288,7 @@ export function TreeDonationForm() {
     } finally {
       isProcessingRef.current = false;
     }
-  }, [wallet, totalUsdc, isValidCount]);
+  }, [wallet, totalUsdc, isValidCount, donationAsset]);
 
   // ── Stripe callbacks ──────────────────────────────────────────────────────
 
@@ -296,10 +308,13 @@ export function TreeDonationForm() {
     setTreeCount(MINIMUM_TREES);
     setIsCustom(false);
     setCustomCount('');
+    setSelectedRegion(undefined);
+    setShowRegionSelector(false);
     setStellarStatus('idle');
     setStellarError(null);
     setStripeClientSecret(null);
     setPaymentMethod('stellar');
+    setDonationAsset('USDC');
   };
 
   // ── Render: confirmation ──────────────────────────────────────────────────
@@ -316,9 +331,19 @@ export function TreeDonationForm() {
     );
   }
 
-  const usdcBalance = wallet ? parseFloat(wallet.balance.usdc) : 0;
+  const selectedStablecoinBalance = wallet
+    ? parseFloat(wallet.balance[donationAsset.toLowerCase() as 'usdc' | 'usdt' | 'eurc'] ?? '0')
+    : 0;
   const xlmBalance = wallet ? parseFloat(wallet.balance.xlm) : 0;
-  const hasSufficientStellar = wallet ? usdcBalance >= totalUsdc || xlmBalance >= totalUsdc : false;
+  const selectedBalance = donationAsset === 'XLM' ? xlmBalance : selectedStablecoinBalance;
+  // USDC is sent 1:1; XLM is converted to USDC on-chain, so the exact XLM cost
+  // is only known at quote time — we just require a positive balance here and
+  // let the path-payment `sendMax` enforce the precise ceiling.
+  const hasSufficientStellar = wallet
+    ? donationAsset !== 'XLM'
+      ? selectedStablecoinBalance >= totalUsdc
+      : xlmBalance > 0
+    : false;
 
   // ── Render: form ──────────────────────────────────────────────────────────
 
@@ -419,13 +444,87 @@ export function TreeDonationForm() {
         </div>
       )}
 
+      {/* ── Step 2: Region selection (Issue #1683) ─────────────────────────── */}
+      {isValidCount && (
+        <section aria-labelledby="region-heading">
+          <div className="flex items-center justify-between mb-4">
+            <Text id="region-heading" variant="h2" className="text-xl font-bold">
+              Where to plant?
+            </Text>
+            {!showRegionSelector && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRegionSelector(true)}
+              >
+                <MapPin className="w-4 h-4 mr-2" />
+                {selectedRegion ? 'Change Region' : 'Select Region'}
+              </Button>
+            )}
+          </div>
+
+          {/* Selected region summary */}
+          {selectedRegion && !showRegionSelector && (
+            <div className="rounded-xl border border-stellar-blue/30 bg-stellar-blue/5 p-4 flex items-center gap-4">
+              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-stellar-blue">
+                <MapPin className="w-6 h-6 text-white" aria-hidden="true" />
+              </div>
+              <div className="flex-1">
+                <Text className="font-bold text-stellar-blue">
+                  {selectedRegion.name}, {selectedRegion.country}
+                </Text>
+                <Text variant="small" className="text-muted-foreground capitalize">
+                  {selectedRegion.ecosystemType} ecosystem
+                </Text>
+              </div>
+              <Badge variant="outline" className="text-xs">
+                {selectedRegion.availableCapacity.toLocaleString()} trees available
+              </Badge>
+            </div>
+          )}
+
+          {!selectedRegion && !showRegionSelector && (
+            <div className="rounded-xl border border-border bg-muted/20 p-6 text-center space-y-3">
+              <MapPin className="w-8 h-8 text-muted-foreground mx-auto" />
+              <Text variant="body" className="text-muted-foreground">
+                No region selected. Your trees will be planted in the region with highest availability.
+              </Text>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRegionSelector(true)}
+              >
+                Choose a specific region
+              </Button>
+            </div>
+          )}
+
+          {/* Region selector map */}
+          {showRegionSelector && (
+            <RegionSelectorMap
+              treeCount={resolvedCount}
+              onRegionSelect={(region) => {
+                setSelectedRegion(region);
+                setShowRegionSelector(false);
+              }}
+              selectedRegion={selectedRegion}
+            />
+          )}
+        </section>
+      )}
+
+      {/* ── Step 3: Payment method ─────────────────────────────────────────── */}
+      {isValidCount && <GiftTreeForm treeCount={resolvedCount} gift={gift} onChange={setGift} />}
+
       {/* ── Step 2: Payment method ─────────────────────────────────────────── */}
       <section aria-labelledby="payment-method-heading">
         <Text id="payment-method-heading" variant="h2" className="text-xl font-bold mb-4">
           Payment method
         </Text>
 
-        <div className="grid grid-cols-2 gap-3 mb-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 mb-6">
           <button
             type="button"
             onClick={() => handleMethodChange('stellar')}
@@ -490,7 +589,7 @@ export function TreeDonationForm() {
                     Connect your Freighter wallet
                   </Text>
                   <Text variant="muted" className="mt-1">
-                    Pay with USDC or XLM on the Stellar network
+                    Pay with USDC, USDT, EURC, or XLM on the Stellar network
                   </Text>
                 </div>
                 <Button
@@ -525,9 +624,44 @@ export function TreeDonationForm() {
                       {wallet.publicKey.slice(0, 8)}…{wallet.publicKey.slice(-6)}
                     </span>
                     <span className="font-medium">
-                      {usdcBalance.toFixed(2)} USDC · {xlmBalance.toFixed(2)} XLM
+                      {selectedBalance.toFixed(2)} {donationAsset} · {xlmBalance.toFixed(2)} XLM
                     </span>
                   </div>
+                </div>
+
+                {/* Pay-with asset selector */}
+                <div>
+                  <Text variant="small" className="font-medium mb-2">
+                    Pay with
+                  </Text>
+                  <div
+                    className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+                    role="radiogroup"
+                    aria-label="Donation asset"
+                  >
+                    {(['USDC', 'USDT', 'EURC', 'XLM'] as const).map((asset) => (
+                      <button
+                        key={asset}
+                        type="button"
+                        role="radio"
+                        aria-checked={donationAsset === asset}
+                        onClick={() => setDonationAsset(asset)}
+                        className={`rounded-lg border-2 px-4 py-2 text-sm font-semibold transition-colors ${
+                          donationAsset === asset
+                            ? 'border-stellar-blue bg-stellar-blue/5 text-stellar-blue'
+                            : 'border-border hover:border-stellar-blue/50'
+                        }`}
+                      >
+                        {asset}
+                      </button>
+                    ))}
+                  </div>
+                  {donationAsset === 'XLM' && (
+                    <Text variant="small" className="text-muted-foreground mt-2">
+                      Your XLM is converted to {totalUsdc.toFixed(2)} USDC at the live market rate.
+                      A small slippage buffer caps the XLM debited from your wallet.
+                    </Text>
+                  )}
                 </div>
 
                 {/* Insufficient balance warning */}
@@ -539,8 +673,9 @@ export function TreeDonationForm() {
                   >
                     <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-yellow-600" />
                     <Text variant="small" className="text-yellow-700">
-                      Insufficient balance. You need {totalUsdc.toFixed(2)} USDC but have{' '}
-                      {usdcBalance.toFixed(2)} USDC / {xlmBalance.toFixed(2)} XLM.
+                      {donationAsset !== 'XLM'
+                        ? `Insufficient ${donationAsset}. You need ${totalUsdc.toFixed(2)} ${donationAsset} but have ${selectedStablecoinBalance.toFixed(2)} ${donationAsset}.`
+                        : `You have no XLM to convert. Add XLM or switch to USDC.`}
                     </Text>
                   </div>
                 )}
@@ -582,8 +717,10 @@ export function TreeDonationForm() {
                   stellar="primary"
                   width="full"
                   onClick={handleStellarPay}
-                  disabled={!isValidCount || isStellarProcessing || !hasSufficientStellar}
-                  aria-label={`Donate ${totalUsdc.toFixed(2)} USDC via Stellar`}
+                  aria-label={`Donate ${totalUsdc.toFixed(2)} USDC via Stellar paying with ${donationAsset}`}
+                  disabled={
+                    !isValidCount || !isValidGift || isStellarProcessing || !hasSufficientStellar
+                  }
                 >
                   {isStellarProcessing ? (
                     <span className="flex items-center gap-2">
@@ -593,7 +730,9 @@ export function TreeDonationForm() {
                   ) : (
                     <>
                       <Wallet className="mr-2 h-4 w-4" aria-hidden="true" />
-                      Donate {totalUsdc.toFixed(2)} USDC
+                      {donationAsset === 'XLM'
+                        ? `Donate ${totalUsdc.toFixed(2)} USDC with XLM`
+                        : `Donate ${totalUsdc.toFixed(2)} USDC`}
                     </>
                   )}
                 </Button>

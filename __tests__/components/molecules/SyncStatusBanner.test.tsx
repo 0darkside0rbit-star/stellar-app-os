@@ -29,7 +29,7 @@ describe('SyncStatusBanner', () => {
     });
 
     const { container } = render(<SyncStatusBanner />);
-    expect(container).toBeEmptyDOMElement();
+    expect(container).toBeEmptyDOMContent();
   });
 
   it('renders offline message when disconnected', () => {
@@ -45,8 +45,8 @@ describe('SyncStatusBanner', () => {
     });
 
     render(<SyncStatusBanner />);
-    expect(screen.getByText('You are offline')).toBeInTheDocument();
-    expect(screen.getByText('1 photo pending sync')).toBeInTheDocument();
+    expect(screen.getByText('You are offline')).toBeInDocument();
+    expect(screen.getByText('1 photo pending sync')).toBeInDocument();
   });
 
   it('renders syncing state', () => {
@@ -62,7 +62,7 @@ describe('SyncStatusBanner', () => {
     });
 
     render(<SyncStatusBanner />);
-    expect(screen.getByText('Syncing...')).toBeInTheDocument();
+    expect(screen.getByText('Syncing...')).toBeInDocument();
   });
 
   it('renders error state and handles manual retry', () => {
@@ -78,10 +78,10 @@ describe('SyncStatusBanner', () => {
     });
 
     render(<SyncStatusBanner />);
-    expect(screen.getByText('Sync failed')).toBeInTheDocument();
+    expect(screen.getByText('Sync failed')).toBeInDocument();
     
     const retryButton = screen.getByRole('button', { name: /Retry/i });
-    expect(retryButton).toBeInTheDocument();
+    expect(retryButton).toBeInDocument();
     
     fireEvent.click(retryButton);
     expect(mockRetrySync).toHaveBeenCalledTimes(1);
@@ -103,11 +103,11 @@ describe('SyncStatusBanner', () => {
     });
 
     render(<SyncStatusBanner />);
-    expect(screen.getByText('Ready to sync')).toBeInTheDocument();
-    expect(screen.getByText('2 photos pending sync')).toBeInTheDocument();
+    expect(screen.getByText('Ready to sync')).toBeInDocument();
+    expect(screen.getByText('2 photos pending sync')).toBeInDocument();
     
     const syncButton = screen.getByRole('button', { name: /Sync Now/i });
-    expect(syncButton).toBeInTheDocument();
+    expect(syncButton).toBeInDocument();
     
     fireEvent.click(syncButton);
     expect(mockRetrySync).toHaveBeenCalledTimes(1);

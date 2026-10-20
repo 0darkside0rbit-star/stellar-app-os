@@ -1,15 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { ReviewForm } from '@/app/components/reviews/ReviewForm';
 import { ReviewCard } from '@/app/components/reviews/ReviewCard';
 import { TeamReviewSummary } from '@/app/components/reviews/TeamReviewSummary';
-import { Review, ReviewSummary } from '@/lib/types/review';
-import { CarbonOffsetCalculator } from '@/app/components/carbon/CarbonOffsetCalculator';
-import { OffsetProjectSearch } from '@/app/components/carbon/OffsetProjectSearch';
-import { ProjectComparisonTool } from '@/app/components/carbon/ProjectComparisonTool';
-import { OffsetProjectFilters } from '@/lib/types/offsetProject';
+import { type Review, type ReviewSummary } from '@/lib/types/review';
+import { CarbonOffsetCalculator } from '@/components/organisms/CarbonOffsetCalculator/CarbonOffsetCalculator';
+import { ProjectComparisonTool } from '@/components/ProjectComparisonTool';
 
 interface OwnershipRecord {
   id: string;
@@ -33,7 +31,6 @@ export default function SponsorReviewsPage() {
   const [showCalculator, setShowCalculator] = useState(false);
   const [showProjectSearch, setShowProjectSearch] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
-  const [projectFilters, setProjectFilters] = useState<OffsetProjectFilters>({});
   const [ownershipHistory, setOwnershipHistory] = useState<OwnershipRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -43,16 +40,12 @@ export default function SponsorReviewsPage() {
   const [transferring, setTransferring] = useState(false);
   const [transferError, setTransferError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchReviews();
-  }, [sponsorId]);
-
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/reviews?sponsorId=${sponsorId}`);
       if (!response.ok) throw new Error('Failed to fetch reviews');
-      
+
       const data = await response.json();
       setReviews(data.reviews);
       setSummary(data.summary);
@@ -61,13 +54,19 @@ export default function SponsorReviewsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [sponsorId]);
+
+  useEffect(() => {
+    void fetchReviews();
+  }, [fetchReviews]);
 
   const fetchOwnershipHistory = async () => {
     try {
       setHistoryLoading(true);
       setHistoryError(null);
-      const query = treeOrBatchId ? `treeOrBatchId=${encodeURIComponent(treeOrBatchId)}` : `sponsorId=${encodeURIComponent(sponsorId)}`;
+      const query = treeOrBatchId
+        ? `treeOrBatchId=${encodeURIComponent(treeOrBatchId)}`
+        : `sponsorId=${encodeURIComponent(sponsorId)}`;
       const response = await fetch(`/api/blockchain/ownership?${query}`);
       if (!response.ok) throw new Error('Failed to fetch ownership history');
       const data = await response.json();
@@ -128,9 +127,9 @@ export default function SponsorReviewsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...data, sponsorId }),
       });
-      
+
       if (!response.ok) throw new Error('Failed to submit review');
-      
+
       setShowForm(false);
       await fetchReviews();
     } catch (error) {
@@ -193,7 +192,9 @@ export default function SponsorReviewsPage() {
           <div className="flex flex-col md:flex-row md:items-end gap-3">
             <div className="flex-1">
               <h2 className="text-lg font-semibold text-gray-900">Stellar Ownership Ledger</h2>
-              <p className="text-sm text-gray-500">Immutable sponsorship and transfer records recorded on-chain.</p>
+              <p className="text-sm text-gray-500">
+                Immutable sponsorship and transfer records recorded on-chain.
+              </p>
             </div>
             <div className="flex gap-2 items-end">
               <label className="text-sm text-gray-700" htmlFor="ownership-tree-id">
@@ -215,9 +216,7 @@ export default function SponsorReviewsPage() {
             </div>
           </div>
 
-          {historyError && (
-            <p className="text-sm text-red-600">{historyError}</p>
-          )}
+          {historyError && <p className="text-sm text-red-600">{historyError}</p>}
 
           {historyLoading ? (
             <p className="text-sm text-gray-500">Loading on-chain records...</p>
@@ -246,11 +245,18 @@ export default function SponsorReviewsPage() {
                       <td className="py-2 font-mono text-xs">{record.fromUserId ?? '—'}</td>
                       <td className="py-2 font-mono texe-xs">{record.toUserId}</td>
                       <td className="py-2 font-mono texe-xs">
-                        <a className="text-green-700 hover:underline" href={`https://stellar.org/explorer/tx/${record.transactionHash}`} target="_blank" rel="noreferrer noopener">
+                        <a
+                          className="text-green-700 hover:underline"
+                          href={`https://stellar.org/explorer/tx/${record.transactionHash}`}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                        >
                           {record.transactionHash}
                         </a>
                       </td>
-                      <td className="py-2 text-xs text-gray-600">{new Date(record.timestamp).toLocaleString()}</td>
+                      <td className="py-2 text-xs text-gray-600">
+                        {new Date(record.timestamp).toLocaleString()}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -258,9 +264,14 @@ export default function SponsorReviewsPage() {
             </div>
           )}
 
-          <form onSubmit={handleTransfer} className="flex flex-col md:flex-row md:items-end gap-3 border-t border-gray-200 pt-4">
+          <form
+            onSubmit={handleTransfer}
+            className="flex flex-col md:flex-row md:items-end gap-3 border-t border-gray-200 pt-4"
+          >
             <div className="flex-1">
-              <label className="text-sm text-gray-700" htmlFor="transfer-tree-id">Tree/Batch ID</label>
+              <label className="text-sm text-gray-700" htmlFor="transfer-tree-id">
+                Tree/Batch ID
+              </label>
               <input
                 id="transfer-tree-id"
                 value={treeOrBatchId}
@@ -269,7 +280,9 @@ export default function SponsorReviewsPage() {
               />
             </div>
             <div className="flex-1">
-              <label className="text-sm text-gray-700" htmlFor="transfer-to-user">Recipient User ID</label>
+              <label className="text-sm text-gray-700" htmlFor="transfer-to-user">
+                Recipient User ID
+              </label>
               <input
                 id="transfer-to-user"
                 value={transferToUserId}
@@ -291,12 +304,7 @@ export default function SponsorReviewsPage() {
 
       {showComparison && <ProjectComparisonTool />}
 
-      {showProjectSearch && (
-        <OffsetProjectSearch
-          filters={projectFilters}
-          onFiltersChange={setProjectFilters}
-        />
-      )}
+      {showProjectSearch && <ProjectComparisonTool />}
 
       {showCalculator && <CarbonOffsetCalculator />}
 
@@ -315,9 +323,7 @@ export default function SponsorReviewsPage() {
         {reviews.length === 0 ? (
           <p className="text-center text-gray-500 py-8">No reviews yet. Be the first to review!</p>
         ) : (
-          reviews.map((review) => (
-            <ReviewCard key={review.id} review={review} />
-          ))
+          reviews.map((review) => <ReviewCard key={review.id} review={review} />)
         )}
       </div>
     </div>

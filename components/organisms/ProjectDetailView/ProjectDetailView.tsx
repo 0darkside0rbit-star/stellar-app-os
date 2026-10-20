@@ -35,7 +35,7 @@ import { BiodiversityIndex } from '@/components/organisms/BiodiversityIndex/Biod
 import { ProjectPlanters } from '@/components/organisms/ProjectPlanters';
 import { FundAllocationTransparency } from '@/components/organisms/FundAllocationTransparency';
 import { NativeSpeciesTransparency } from '@/components/organisms/NativeSpeciesTransparency';
-import { ProjectProtectionImpact } from '@/components/organisms/SponsorImpact/ProjectProtectionImpact';
+import dynamic from 'next/dynamic';
 import { PlantingMethods } from '@/components/organisms/PlantingMethods/PlantingMethods';
 import { RestorationTimelineGantt } from '@/components/organisms/RestorationTimeline/RestorationTimelineGantt';
 import { LivePlantingStream } from '@/components/organisms/LivePlantingStream/LivePlantingStream';
@@ -44,6 +44,14 @@ import { mockCarbonProjects } from '@/lib/api/mock/carbonProjects';
 import { toast } from 'sonner';
 import type { AdminProjectDetail } from '@/lib/types/adminProject';
 import type { CarbonProject } from '@/lib/types/carbon';
+
+const ProjectProtectionImpact = dynamic(
+  () =>
+    import('@/components/organisms/SponsorImpact/ProjectProtectionImpact').then(
+      (module) => module.ProjectProtectionImpact
+    ),
+  { ssr: false }
+);
 
 interface ProjectDetailViewProps {
   adminProject: AdminProjectDetail;

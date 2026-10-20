@@ -10,6 +10,7 @@ import { getProjectComparison, parseProjectComparisonInput } from '@/lib/analyti
 import { getFarmerIncomePrediction, parseFarmerIncomePredictionInput } from '@/lib/analytics/farmer-income';
 import { getComplianceReport, parseComplianceReportInput } from '@/lib/analytics/compliance-report';
 import { searchOffsetProjects, parseOffsetProjectSearchParams } from '@/lib/offset/project-search';
+import { getCorporateEsgImpact, parseCorporateEsgImpactFilters } from '@/lib/analytics/corporate-esg-impact';
 
 export const runtime = 'nodejs';
 
@@ -38,7 +39,32 @@ export async function GET(request: Request): Promise<NextResponse> {
 }
 
 /**
-* GET /api/admin/analytics/tree-survival/payment-methods
+ * GET /api/admin/analytics/tree-survival/corporate-impact
+ *
+ * Returns the corporate ESG impact dashboard for a sponsor account: trees
+ * funded, CO2 sequestered, biodiversity contribution, and employee engagement,
+ * aligned to ESG reporting frameworks (GRI, SASB, CDP, TSFD, SEBi).
+ */
+export async function GET_CORPORATE_IMPACT(request: Request): Promise<NextResponse> {
+  if (!(await isAdminRequest())) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  try {
+    const filters = parseCorporateEsgImpactFilters(new URL(request.url).searchParams);
+    const report = await getCorporateEsgImpact(getReadPool(), filters);
+    return NextResponse.json(report, {
+      headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=300' },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to generate corporate ESG impact';
+    const status = /must be|required|invalid|unsupported|non-negative|unknown|before or equal/.test(message) ? 400 : 500;
+    console.error('[corporate-esg-impact]', error);
+    return NextResponse.json({ error: message }, { status });
+  }
+}
+
+/**
+ * GET /api/admin/analytics/tree-survival/payment-methods
  *
  * Returns the supported farmer payment methods across XLM, USDC, and fiat
  * currencies, including bank transfers, crypto wallets, and payment apps.
@@ -135,7 +161,7 @@ export async function PATCH(request: Request): Promise<NextResponse> {
 /**
  * DELETE /api/admin/analytics/tree-survival
  *
-* Searches carbon offset projects with filters: project type, location,
+ * Searches carbon offset projects with filters: project type, location,
  * co-benefits (biodiversity, water, soil), certification standard, and
  * price range.
  */
@@ -144,13 +170,13 @@ export async function DELETE(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {
-const params = parseOffsetProjectSearchParams(new URL(request.url).searchParams);
+    const params = parseOffsetProjectSearchParams(new URL(request.url).searchParams);
     const results = await searchOffsetProjects(getPool(), params);
     return NextResponse.json(results, {
       headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=300' },
     });
   } catch (error) {
-const message = error instanceof Error ? error.message : 'Failed to search offset projects';
+    const message = error instanceof Error ? error.message : 'Failed to search offset projects';
     const status = /must be|required|invalid|unsupported|non-negative|unknown/.test(message) ? 400 : 500;
     console.error('[offset-project-search]', error);
     return NextResponse.json({ error: message }, { status });

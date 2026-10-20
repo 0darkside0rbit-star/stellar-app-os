@@ -1,4 +1,4 @@
-import { Activity, Archive, Clock3, Coins, FileText, FolderKanban, HandCoins } from 'lucide-react';
+import { Activity, Archive, Clock3, Coins, Download, FileText, FolderKanban, HandCoins, Leaf, Users } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -9,6 +9,7 @@ import {
 import { TrendChart } from '@/components/organisms/AdminDashboard/TrendChart';
 import { getAdminDashboardData } from '@/lib/api/mock/adminDashboard';
 import type { DashboardActivity } from '@/lib/types/adminDashboard';
+import { getCorporateEsgData } from '@/lib/api/mock/corporateEsg';
 
 const TREE_STATUSES = ['all', 'pending', 'planted', 'verified', 'failed'];
 
@@ -75,6 +76,7 @@ export default async function AdminDashboardPage({
   searchParams?: { status?: string };
 }) {
   const { metrics, trends, recentActivity } = await getAdminDashboardData();
+  const esg = await getCorporateEsgData();
 
   const selectedStatus =
     searchParams?.status && TREE_STATUSES.includes(searchParams.status)
@@ -97,11 +99,90 @@ export default async function AdminDashboardPage({
             Centralized platform health metrics, operational trends, and latest system activity.
           </p>
         </div>
+        <a
+          href="/api/corporate/esg/export"
+          className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-stellar-blue"
+          aria-label="Export ESG report as PDF"
+        >
+          <Download className="h-4 w-4" aria-hidden="true" />
+          Export PDF
+        </a>
         <div className="inline-flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
           <Clock3 h className="h-4 w-4" aria-hidden="true" />
           Updated moments ago
         </div>
       </header>
+
+      <section aria-labelledby="esg-heading" className="mb-8 space-y-4">
+        <h2 id="esg-heading" className="text-xl font-semibold text-foreground">
+          ESG impact
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-2 text-muted-foreground">
+                <Leaf className="h-4 w-4" aria-hidden="true" />
+                Trees funded
+              </CardDescription>
+              <CardTitle className="text-3xl">{formatCount(esg.treesFunded)}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Total trees funded through corporate sponsorships.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-2 text-muted-foreground">
+                <Coins className="h-4 w-4" aria-hidden="true" />
+                CO2 sequestered
+              </CardDescription>
+              <CardTitle className="text-3xl">{formatCount(esg.co2SequesteredTonnes)} t</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Estimated tonnes of CO2 sequestered (GHG Protocol aligned).
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-2 text-muted-foreground">
+                <Leaf className="h-4 w-4" aria-hidden="true" />
+                Biodiversity contribution
+              </CardDescription>
+              <CardTitle className="text-3xl">{formatCount(esg.biodiversityScore)}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Weighted biodiversity index across funded projects (TNFD aligned).
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-2 text-muted-foreground">
+                <Users className="h-4 w-4" aria-hidden="true" />
+                Employee engagement
+              </CardDescription>
+              <CardTitle className="text-3xl">{formatCount(esg.engagedEmployees)}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Employees participating in sponsored sustainability initiatives.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Metrics aligned with GRI 304, SASB, and GHG Protocol reporting frameworks. Data available
+          via the BI API at <code>/api/corporate/esg</code>.
+        </p>
+      </section>
 
       <section aria-labelledby="overview-heading" className="mb-8 space-y-4">
         <h2 id="overview-heading" className="text-xl font-semibold text-foreground">

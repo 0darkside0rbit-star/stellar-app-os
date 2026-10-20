@@ -78,7 +78,8 @@ describe('OffsetProjectMap with Climate Layer', () => {
     // Click planting conditions
     const condBtn = screen.getByRole('button', { name: /Planting Conditions/i });
     fireEvent.click(condBtn);
-    expect(screen.getByText(/Planting Conditions/i)).toBeDefined();
+    expect(screen.getByText('Planting Conditions', { selector: 'span' })).toBeDefined();
+    expect(screen.queryByText('Temperature Scale')).toBeNull();
   });
 
   it('renders historical vs current comparison data in popups', () => {

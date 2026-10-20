@@ -14,6 +14,7 @@ import {
 import { useAdminAnalytics } from '@/hooks/useAdminAnalytics';
 import type { AnalyticsTimeRange } from '@/lib/types/adminAnalytics';
 import type { ComplianceReport, ComplianceStandard } from '@/lib/types/compliance';
+import { buildComplianceCsv } from '@/lib/utils/complianceCsv';
 
 const RANGE_LABELS: Record<AnalyticsTimeRange, string> = {
   '7d': 'Last 7 days',
@@ -279,7 +280,7 @@ export default function AdminAnalyticsPage() {
                     <CardTitle className="mt-2 h-8 w-24 animate-pulse rounded bg-muted" />
                   </CardHeader>
                   <CardContent>
-                    <div className="h-4 w-full animate-pulse rounded bg-muted" />
+                    <div className="h4 w-full animate-pulse rounded bg-muted" />
                   </CardContent>
                 </Card>
               ))

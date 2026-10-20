@@ -39,6 +39,7 @@ import { ProjectProtectionImpact } from '@/components/organisms/SponsorImpact/Pr
 import { PlantingMethods } from '@/components/organisms/PlantingMethods/PlantingMethods';
 import { RestorationTimelineGantt } from '@/components/organisms/RestorationTimeline/RestorationTimelineGantt';
 import { LivePlantingStream } from '@/components/organisms/LivePlantingStream/LivePlantingStream';
+import { WaterImpactSection } from '@/components/organisms/WaterImpactSection/WaterImpactSection';
 
 import { mockCarbonProjects } from '@/lib/api/mock/carbonProjects';
 import { toast } from 'sonner';
@@ -72,7 +73,6 @@ export function ProjectDetailView({ adminProject, carbonProject }: ProjectDetail
     { label: 'CO2 Removed', value: '25,480', unit: 'tons', icon: 'co2' },
     { label: 'Trees Planted', value: '1.2M', icon: 'tree' },
     { label: 'Energy Saved', value: '450', unit: 'MWh', icon: 'energy' },
-    { label: 'Water Conserved', value: '85K', unit: 'gal', icon: 'water' },
     { label: 'Jobs Created', value: '120', icon: 'community' },
     { label: 'Verified Status', value: 'Active', icon: 'verified' },
   ];
@@ -239,6 +239,8 @@ export function ProjectDetailView({ adminProject, carbonProject }: ProjectDetail
                 coordinates={carbonProject.coordinates}
               />
             </section>
+
+            <WaterImpactSection projectId={adminProject.id} projectName={adminProject.name} />
 
             {/* Issue #1675: documented planting methods per project */}
             <section id="planting-methods">

@@ -30,8 +30,10 @@ import {
   type Milestone,
 } from '@/components/organisms/ProjectTimeline/ProjectTimeline';
 import { ProjectCarousel } from '@/components/organisms/ProjectCarousel/ProjectCarousel';
+import { DroneImageryViewer } from '@/components/organisms/DroneImageryViewer/DroneImageryViewer';
 
 import { mockCarbonProjects } from '@/lib/api/mock/carbonProjects';
+import { getDroneImagesByProject } from '@/lib/data/drone-imagery';
 import { toast } from 'sonner';
 import type { AdminProjectDetail } from '@/lib/types/adminProject';
 import type { CarbonProject } from '@/lib/types/carbon';
@@ -230,6 +232,18 @@ export function ProjectDetailView({ adminProject, carbonProject }: ProjectDetail
                 <div className="h-px bg-stellar-blue/20 flex-1 ml-4" />
               </Text>
               <ProjectTimeline milestones={milestones} />
+            </section>
+
+            {/* Issue #1680: Drone Imagery Viewer */}
+            <section id="drone-imagery">
+              <Text variant="h3" className="mb-6 font-bold flex items-center gap-2">
+                Drone Imagery
+                <div className="h-px bg-stellar-blue/20 flex-1 ml-4" />
+              </Text>
+              <DroneImageryViewer
+                images={getDroneImagesByProject(adminProject.id)}
+                projectId={adminProject.id}
+              />
             </section>
           </div>
 

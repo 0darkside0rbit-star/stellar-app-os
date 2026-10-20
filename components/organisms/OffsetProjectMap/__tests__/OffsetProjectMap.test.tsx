@@ -56,9 +56,7 @@ describe('OffsetProjectMap with Climate Layer', () => {
 
     expect(toggle.textContent).toContain('Climate Layer: ON');
     // Open meteorological API note is displayed
-    expect(
-      screen.getByText(/Sourced from open meteorological APIs/i)
-    ).toBeDefined();
+    expect(screen.getByText(/Sourced from open meteorological APIs/i)).toBeDefined();
 
     // Metric selectors are visible
     expect(screen.getByRole('button', { name: /Rainfall \(mm\)/i })).toBeDefined();

@@ -1,12 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  DATA_REGIONS,
-  getRegionalPool,
-  queryAcrossRegions,
-  resetRegionalPools,
-  resolveDataRegion,
-  type DataRegion,
-} from '../data-residency';
+import { DATA_REGIONS, getRegionalPool, queryAcrossRegions, resetRegionalPools, resolveDataRegion } from '../data-residency';
 
 // Mock pg so no real connections are opened.
 vi.mock('pg', () => ({

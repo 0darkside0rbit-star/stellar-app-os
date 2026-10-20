@@ -17,20 +17,13 @@ function getTreesRemaining(treeTarget: number, treesPlanted: number): number {
   return Math.max(0, treeTarget - treesPlanted);
 }
 
-function getRemainingMatchBalance(
-  matchFund: number,
-  matchUsed: number
-): number {
+function getRemainingMatchBalance(matchFund: number, matchUsed: number): number {
   return Math.max(0, matchFund - matchUsed);
 }
 
 export default function CampaignsPage() {
-  const endangeredCampaigns = CAMPAIGNS.filter(
-    (c) => c.isEndangeredBiome ?? false
-  );
-  const otherCampaigns = CAMPAIGNS.filter(
-    (c) => !(c.isEndangeredBiome ?? false)
-  );
+  const endangeredCampaigns = CAMPAIGNS.filter((c) => c.isEndangeredBiome ?? false);
+  const otherCampaigns = CAMPAIGNS.filter((c) => !(c.isEndangeredBiome ?? false));
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-10">
@@ -51,14 +44,8 @@ export default function CampaignsPage() {
           <div className="grid gap-6 md:grid-cols-2">
             {endangeredCampaigns.map((c) => {
               const daysRemaining = getDaysRemaining(c.deadline);
-              const treesRemaining = getTreesRemaining(
-                c.treeTarget,
-                c.treesPlanted
-              );
-              const remainingMatch = getRemainingMatchBalance(
-                c.matchFund,
-                c.matchUsed
-              );
+              const treesRemaining = getTreesRemaining(c.treeTarget, c.treesPlanted);
+              const remainingMatch = getRemainingMatchBalance(c.matchFund, c.matchUsed);
               return (
                 <Link key={c.slug} href={`/campaigns/${c.slug}`}>
                   <Card className="h-full space-y-2 p-6 hover:shadow-md">
@@ -75,17 +62,11 @@ export default function CampaignsPage() {
                     <Progress value={getProgressPercent(c)} />
                     <p className="text-sm">{getProgressPercent(c)}% funded</p>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Match remaining
-                      </span>
-                      <span className="font-medium">
-                        ${remainingMatch.toLocaleString()}
-                      </span>
+                      <span className="text-muted-foreground">Match remaining</span>
+                      <span className="font-medium">${remainingMatch.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {daysRemaining} days left
-                      </span>
+                      <span className="text-muted-foreground">{daysRemaining} days left</span>
                       <span className="font-medium">
                         {treesRemaining.toLocaleString()} trees to go
                       </span>

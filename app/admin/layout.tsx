@@ -8,9 +8,5 @@ interface AdminLayoutProps {
 export default async function AdminLayout({ children }: AdminLayoutProps) {
   await requireAdminAccess();
 
-  return (
-    <>
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }

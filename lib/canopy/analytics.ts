@@ -224,9 +224,5 @@ export function surveysToCsv(surveys: CanopySurvey[]): string {
 }
 
 export function surveysToJson(surveys: CanopySurvey[]): string {
-  return JSON.stringify(
-    { summary: summarize(surveys), surveys: sortByDate(surveys) },
-    null,
-    2
-  );
+  return JSON.stringify({ summary: summarize(surveys), surveys: sortByDate(surveys) }, null, 2);
 }

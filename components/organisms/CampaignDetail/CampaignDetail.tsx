@@ -15,7 +15,11 @@ import {
 const POLL_INTERVAL_MS = 15000;
 
 const usd = (n: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(n);
 
 export function CampaignDetail({ initialCampaign }: { initialCampaign: Campaign }) {
   const [campaign, setCampaign] = useState(initialCampaign);

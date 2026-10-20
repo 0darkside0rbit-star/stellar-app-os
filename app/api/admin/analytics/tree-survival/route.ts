@@ -5,10 +5,16 @@ import { isAdminRequest } from '@/lib/auth/admin';
 import { getTreeAnalytics, parseTreeAnalyticsFilters } from '@/lib/analytics/tree-survival';
 import { getCarbonOffsetEstimate, parseCarbonOffsetInput } from '@/lib/analytics/carbon-offset';
 import { processFarmerPayment, parseFarmerPaymentInput } from '@/lib/payments/farmer-payment';
-import { getFarmerPaymentMethods, parseFarmerPaymentMethodFilters } from '@/lib/payments/farmer-payment-methods';
-import { getProjectComparison, parseProjectComparisonInput } from '@/lib/analytics/project-comparison';
-import { getFarmerIncomePrediction, parseFarmerIncomePredictionInput } from '@/lib/analytics/farmer-income';
-import { getComplianceReport, parseComplianceReportInput } from '@/lib/analytics/compliance-report';
+import {
+  getFarmerPaymentMethods,
+  parseFarmerPaymentMethodFilters,
+} from '@/lib/payments/farmer-payment-methods';
+import '@/lib/analytics/project-comparison';
+import {
+  getFarmerIncomePrediction,
+  parseFarmerIncomePredictionInput,
+} from '@/lib/analytics/farmer-income';
+import '@/lib/analytics/compliance-report';
 import { searchOffsetProjects, parseOffsetProjectSearchParams } from '@/lib/offset/project-search';
 
 export const runtime = 'nodejs';
@@ -38,7 +44,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 }
 
 /**
-* GET /api/admin/analytics/tree-survival/payment-methods
+ * GET /api/admin/analytics/tree-survival/payment-methods
  *
  * Returns the supported farmer payment methods across XLM, USDC, and fiat
  * currencies, including bank transfers, crypto wallets, and payment apps.
@@ -54,7 +60,8 @@ export async function GET_PAYMENT_METHODS(request: Request): Promise<NextRespons
       headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=300' },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to load farmer payment methods';
+    const message =
+      error instanceof Error ? error.message : 'Failed to load farmer payment methods';
     const status = /must be|required|invalid|unsupported|non-negative/.test(message) ? 400 : 500;
     console.error('[farmer-payment-methods]', error);
     return NextResponse.json({ error: message }, { status });
@@ -135,7 +142,7 @@ export async function PATCH(request: Request): Promise<NextResponse> {
 /**
  * DELETE /api/admin/analytics/tree-survival
  *
-* Searches carbon offset projects with filters: project type, location,
+ * Searches carbon offset projects with filters: project type, location,
  * co-benefits (biodiversity, water, soil), certification standard, and
  * price range.
  */
@@ -144,14 +151,16 @@ export async function DELETE(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {
-const params = parseOffsetProjectSearchParams(new URL(request.url).searchParams);
+    const params = parseOffsetProjectSearchParams(new URL(request.url).searchParams);
     const results = await searchOffsetProjects(getPool(), params);
     return NextResponse.json(results, {
       headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=300' },
     });
   } catch (error) {
-const message = error instanceof Error ? error.message : 'Failed to search offset projects';
-    const status = /must be|required|invalid|unsupported|non-negative|unknown/.test(message) ? 400 : 500;
+    const message = error instanceof Error ? error.message : 'Failed to search offset projects';
+    const status = /must be|required|invalid|unsupported|non-negative|unknown/.test(message)
+      ? 400
+      : 500;
     console.error('[offset-project-search]', error);
     return NextResponse.json({ error: message }, { status });
   }

@@ -73,8 +73,8 @@ export default async function ProjectPage({ params }: Props) {
           role="alert"
           className="mx-auto mt-4 max-w-7xl rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800"
         >
-          <strong className="font-semibold">Deforestation alert:</strong>{' '}
-          Deforestation has been detected inside this project&apos;s forest protection buffer zone.
+          <strong className="font-semibold">Deforestation alert:</strong> Deforestation has been
+          detected inside this project&apos;s forest protection buffer zone.
         </div>
       )}
 

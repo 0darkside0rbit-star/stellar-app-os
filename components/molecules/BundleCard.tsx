@@ -5,14 +5,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/atoms/Badge';
 import { Button } from '@/components/atoms/Button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/molecules/Card';
+import { Card, CardContent, CardDescription, CardFooter, CardTitle } from '@/components/molecules/Card';
 import type { TreeBundle } from '@/lib/types/tree-bundle';
 
 export interface BundleCardProps extends HTMLAttributes<HTMLDivElement> {
@@ -100,10 +93,7 @@ const BundleCard = forwardRef<HTMLDivElement, BundleCardProps>(
           </div>
 
           {/* Stats row */}
-          <div
-            className="grid grid-cols-2 gap-2"
-            aria-label="Bundle statistics"
-          >
+          <div className="grid grid-cols-2 gap-2" aria-label="Bundle statistics">
             <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
               <p className="text-xl font-bold text-stellar-green">{bundle.treeCount}</p>
               <p className="text-xs text-muted-foreground">Trees</p>

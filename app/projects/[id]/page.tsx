@@ -6,6 +6,7 @@ import { ProjectDetailView } from '@/components/organisms/ProjectDetailView/Proj
 import { ForestRegenerationSimulation } from '@/components/organisms/ForestRegenerationSimulation/ForestRegenerationSimulation';
 import { mockAdminProjectDetails } from '@/lib/api/mock/adminProjectDetails';
 import { mockCarbonProjects } from '@/lib/api/mock/carbonProjects';
+import { getMockProjectCoverage } from '@/lib/api/mock/projectCoverage';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -85,7 +86,11 @@ export default async function ProjectPage({ params }: Props) {
         </div>
       )}
 
-      <ProjectDetailView adminProject={adminProject} carbonProject={carbonProject} />
+      <ProjectDetailView
+        adminProject={adminProject}
+        carbonProject={carbonProject}
+        coverage={getMockProjectCoverage(adminProject.id)}
+      />
 
       <ForestRegenerationSimulation
         species={adminProject.primarySpecies}

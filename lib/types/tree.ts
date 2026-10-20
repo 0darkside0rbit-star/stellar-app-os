@@ -1,4 +1,19 @@
-export type TreeSpecies = 'Teak' | 'Moringa' | 'Eucalyptus' | 'Mangrove';
+export type TreeSpecies =
+  | 'Teak'
+  | 'Moringa'
+  | 'Eucalyptus'
+  | 'Mangrove'
+  | 'Acacia'
+  | 'Neem'
+  | 'African Mahogany'
+  | 'Baobab'
+  | 'Bamboo (Moso)'
+  | 'West African Cedar'
+  | 'Caribbean Pine'
+  | 'Iroko'
+  | 'Shea'
+  | 'Cashew'
+  | 'African Locust Bean';
 
 export type TreeStatus = 'funded' | 'planted' | 'verified' | 'completed' | 'failed';
 
@@ -13,6 +28,11 @@ export interface Tree {
   lng: number;
   co2OffsetKgPerYear: number;
   projectName: string;
+  /** On-chain collectible ID and current owner for sponsored trees. */
+  nftTokenId?: string;
+  nftOwner?: string;
+  /** Optional evidence image shown on the tree detail page. */
+  imageUrl?: string;
 }
 
 export interface TreeFilterState {

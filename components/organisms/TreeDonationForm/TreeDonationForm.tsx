@@ -10,7 +10,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { Minus, Plus, Trees, CheckCircle, AlertCircle, Wallet, CreditCard } from 'lucide-react';
+import { Minus, Plus, Trees, CheckCircle, AlertCircle, Wallet, CreditCard, MapPin } from 'lucide-react';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { Button } from '@/components/atoms/Button';
@@ -18,7 +18,9 @@ import { Text } from '@/components/atoms/Text';
 import { Badge } from '@/components/atoms/Badge';
 import { LoadingSpinner } from '@/components/atoms/LoadingSpinner/LoadingSpinner';
 import { WalletModal } from '@/components/organisms/WalletModal/WalletModal';
+import { RegionSelectorMap } from '@/components/organisms/RegionSelectorMap/RegionSelectorMap';
 import { useWalletContext } from '@/contexts/WalletContext';
+import type { PlantingRegion } from '@/lib/types/planting-region';
 import { processDonationPayment } from '@/lib/stellar/donation';
 import { generateIdempotencyKey } from '@/lib/constants/donation';
 import { showToast } from '@/lib/toast';
@@ -176,6 +178,8 @@ export function TreeDonationForm() {
   const [treeCount, setTreeCount] = useState(MINIMUM_TREES);
   const [customCount, setCustomCount] = useState('');
   const [isCustom, setIsCustom] = useState(false);
+  const [selectedRegion, setSelectedRegion] = useState<PlantingRegion | undefined>();
+  const [showRegionSelector, setShowRegionSelector] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'stellar' | 'card'>('stellar');
   const [donationAsset, setDonationAsset] = useState<DonationAsset>('USDC');
   const [stellarStatus, setStellarStatus] = useState<TransactionStatus>('idle');
@@ -304,6 +308,8 @@ export function TreeDonationForm() {
     setTreeCount(MINIMUM_TREES);
     setIsCustom(false);
     setCustomCount('');
+    setSelectedRegion(undefined);
+    setShowRegionSelector(false);
     setStellarStatus('idle');
     setStellarError(null);
     setStripeClientSecret(null);
@@ -438,6 +444,78 @@ export function TreeDonationForm() {
         </div>
       )}
 
+      {/* ── Step 2: Region selection (Issue #1683) ─────────────────────────── */}
+      {isValidCount && (
+        <section aria-labelledby="region-heading">
+          <div className="flex items-center justify-between mb-4">
+            <Text id="region-heading" variant="h2" className="text-xl font-bold">
+              Where to plant?
+            </Text>
+            {!showRegionSelector && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRegionSelector(true)}
+              >
+                <MapPin className="w-4 h-4 mr-2" />
+                {selectedRegion ? 'Change Region' : 'Select Region'}
+              </Button>
+            )}
+          </div>
+
+          {/* Selected region summary */}
+          {selectedRegion && !showRegionSelector && (
+            <div className="rounded-xl border border-stellar-blue/30 bg-stellar-blue/5 p-4 flex items-center gap-4">
+              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-stellar-blue">
+                <MapPin className="w-6 h-6 text-white" aria-hidden="true" />
+              </div>
+              <div className="flex-1">
+                <Text className="font-bold text-stellar-blue">
+                  {selectedRegion.name}, {selectedRegion.country}
+                </Text>
+                <Text variant="small" className="text-muted-foreground capitalize">
+                  {selectedRegion.ecosystemType} ecosystem
+                </Text>
+              </div>
+              <Badge variant="outline" className="text-xs">
+                {selectedRegion.availableCapacity.toLocaleString()} trees available
+              </Badge>
+            </div>
+          )}
+
+          {!selectedRegion && !showRegionSelector && (
+            <div className="rounded-xl border border-border bg-muted/20 p-6 text-center space-y-3">
+              <MapPin className="w-8 h-8 text-muted-foreground mx-auto" />
+              <Text variant="body" className="text-muted-foreground">
+                No region selected. Your trees will be planted in the region with highest availability.
+              </Text>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRegionSelector(true)}
+              >
+                Choose a specific region
+              </Button>
+            </div>
+          )}
+
+          {/* Region selector map */}
+          {showRegionSelector && (
+            <RegionSelectorMap
+              treeCount={resolvedCount}
+              onRegionSelect={(region) => {
+                setSelectedRegion(region);
+                setShowRegionSelector(false);
+              }}
+              selectedRegion={selectedRegion}
+            />
+          )}
+        </section>
+      )}
+
+      {/* ── Step 3: Payment method ─────────────────────────────────────────── */}
       {isValidCount && <GiftTreeForm treeCount={resolvedCount} gift={gift} onChange={setGift} />}
 
       {/* ── Step 2: Payment method ─────────────────────────────────────────── */}

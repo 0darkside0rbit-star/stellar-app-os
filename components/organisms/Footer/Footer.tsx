@@ -41,6 +41,7 @@ function buildFooterSections(t: TFunction): FooterSection[] {
         { label: t('footer.apiDocs'), href: '#api-docs' },
         { label: t('footer.devGuide'), href: '#dev-guide' },
         { label: t('footer.community'), href: '#community' },
+        { label: t('footer.plantingEvents', 'Planting events'), href: '/planting/events' },
       ],
     },
     {

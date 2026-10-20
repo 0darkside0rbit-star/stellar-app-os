@@ -33,6 +33,8 @@
     "settlement:run": "tsx lib/settlement/worker.ts",
     "email:digests:generate": "tsx lib/workers/generate-weekly-digests.ts --once",
     "email:newsletters:send": "tsx lib/workers/newsletter-worker.ts --once",
+    "email:volunteers": "tsx lib/workers/volunteer-briefings.ts",
+    "email:volunteers:once": "tsx lib/workers/volunteer-briefings.ts --once",
     "seed:species": "node scripts/seed-species.mjs",
     "seed:methodologies": "tsx scripts/seed-carbon-methodologies.ts",
     "db:backup": "node scripts/db-backup.mjs",

@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS email_digests (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id       UUID NOT NULL,
   user_email    VARCHAR(255) NOT NULL,
-  digest_type   VARCHAR(10) NOT NULL CHECK (digest_type IN ('weekly', 'monthly')),
+  digest_type   VARCHAR(10) NOT NULL CHECK (digest_type IN ('daily', 'weekly', 'monthly')),
   status        VARCHAR(10) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'sent', 'failed')),
   tree_count    INT NOT NULL DEFAULT 0,
   total_co2_kg  REAL NOT NULL DEFAULT 0,
@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS email_digests (
   error_count   INT NOT NULL DEFAULT 0,
   last_error    TEXT,
   last_error_at TIMESTAMPTZ,
+  sponsor_timezone VARCHAR(64) NOT NULL DEFAULT 'UTC',
+  scheduled_for TIMESTAMPTZ,
   generated_at  TIMESTAMPTZ DEFAULT now(),
   sent_at       TIMESTAMPTZ,
   created_at    TIMESTAMPTZ DEFAULT now(),
@@ -31,65 +33,54 @@ CREATE INDEX IF NOT EXISTS idx_email_digests_pending
 CREATE INDEX IF NOT EXISTS idx_email_digests_status
   ON email_digests(status);
 
+-- Index for the hourly worker: select due digests by status and scheduled send time
+CREATE INDEX IF NOT EXISTS idx_email_digests_due
+  ON email_digests(status, scheduled_for);
+
 -- Unique constraint to prevent duplicate digests per user per period
 CREATE UNIQUE INDEX IF NOT EXISTS idx_email_digests_unique_per_user
   ON email_digests(user_id, digest_type, date_trunc('week', generated_at))
   WHERE status IN ('pending', 'processing', 'sent');
 
--- Migration 015: Monthly forest health newsletter (Issue #1703)
--- Adds newsletter CMS tables and links monthly digests to a newsletter issue.
+-- Idempotently extend an existing table (from migration 012) with the new columns
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'email_digests' AND column_name = 'sponsor_timezone'
+  ) THEN
+    ALTER TABLE email_digests
+      ADD COLUMN sponsor_timezone VARCHAR(64) NOT NULL DEFAULT 'UTC';
+  END IF;
 
-CREATE TABLE IF NOT EXISTS newsletters (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  title         VARCHAR(255) NOT NULL,
-  subject       VARCHAR(255) NOT NULL,
-  preheader     VARCHAR(255),
-  -- Curated sections: platform news, featured stories, species spotlights, conservation tips
-  sections      JSONB NOT NULL DEFAULT '{}'::jsonb,
-  status        VARCHAR(10) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'sending', 'sent', 'cancelled')),
-  scheduled_at  TIMESTAMPTZ,
-  sent_at       TIMESTAMPTZ,
-  created_by    UUID,
-  created_at    TIMESTAMPTZ DEFAULT now(),
-  updated_at    TIMESTAMPTZ DEFAULT now()
-);
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'email_digests' AND column_name = 'scheduled_for'
+  ) THEN
+    ALTER TABLE email_digests
+      ADD COLUMN scheduled_for TIMESTAMPTZ;
+  END IF;
+END $$;
 
--- Index for the scheduler's primary query: fetch due newsletters oldest-first
-CREATE INDEX IF NOT EXISTS idx_newsletters_scheduled
-  ON newsletters(scheduled_at)
-  WHERE status = 'scheduled';
+-- Idempotently widen the digest_type CHECK constraint to allow 'daily'
+DO $$
+DECLARE
+  constraint_name TEXT;
+BEGIN
+  SELECT con.conname INTO constraint_name
+  FROM pg_constraint con
+  JOIN pg_class rel ON rel.oid = con.conrelid
+  WHERE rel.relname = 'email_digests'
+    AND con.contype = 'c'
+    AND pg_get_constraintdef(con.oid) LIKE '%digest_type%';
 
--- Index for status lookups in the admin panel
-CREATE INDEX IF NOT EXISTS idx_newsletters_status
-  ON newsletters(status);
+  IF constraint_name IS NOT NULL THEN
+    EXECUTE format('ALTER TABLE email_digests DROP CONSTRAINT %I', constraint_name);
+  END IF;
 
-CREATE TABLE IF NOT EXISTS newsletter_subscriptions (
-  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id        UUID NOT NULL,
-  user_email     VARCHAR(255) NOT NULL,
-  opted_in       BOOLEAN NOT NULL DEFAULT true,
-  opted_in_at    TIMESTAMPTZ DEFAULT now(),
-  opted_out_at   TIMESTAMPTZ,
-  created_at     TIMESTAMPTZ DEFAULT now(),
-  updated_at     TIMESTAMPTZ DEFAULT now()
-);
-
--- One subscription record per sponsor
-CREATE UNIQUE INDEX IF NOT EXISTS idx_newsletter_subscriptions_user
-  ON newsletter_subscriptions(user_id);
-
--- Index for the worker's recipient query: opted-in subscribers only
-CREATE INDEX IF NOT EXISTS idx_newsletter_subscriptions_opted_in
-  ON newsletter_subscriptions(opted_in)
-  WHERE opted_in = true;
-
--- Link monthly digests to the newsletter issue they were sent from
-ALTER TABLE email_digests
-  ADD COLUMN IF NOT EXISTS newsletter_id UUID REFERENCES newsletters(id) ON DELETE SET NULL;
-
--- Index for per-newsletter send tracking
-CREATE INDEX IF NOT EXISTS idx_email_digests_newsletter
-  ON email_digests(newsletter_id)
-  WHERE newsletter_id IS NOT NULL;
+  ALTER TABLE email_digests
+    ADD CONSTRAINT email_digests_digest_type_check
+    CHECK (digest_type IN ('daily', 'weekly', 'monthly'));
+END $$;
 
 COMMIT;

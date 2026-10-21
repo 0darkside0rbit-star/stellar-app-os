@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { AchievementBadgeProgress, SponsorshipMilestones } from '@/lib/types/sponsor-badge';
+import type { SponsorshipMilestones } from '@/lib/types/sponsor-badge';
 import { getAchievementBadgeProgress } from '@/lib/gamification/achievement-badges';
 
 interface AchievementBadgesCardProps {
@@ -80,7 +80,8 @@ export function AchievementBadgesCard({
               <div className="flex justify-between text-xs font-semibold">
                 <span className="text-muted-foreground">Progress</span>
                 <span className={isUnlocked ? 'text-emerald-600 font-bold' : 'text-foreground'}>
-                  {currentValue.toLocaleString()} / {threshold.toLocaleString()} {badge.metricUnit} ({progressPercent}%)
+                  {currentValue.toLocaleString()} / {threshold.toLocaleString()} {badge.metricUnit}{' '}
+                  ({progressPercent}%)
                 </span>
               </div>
 

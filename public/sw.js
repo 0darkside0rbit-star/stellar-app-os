@@ -288,36 +288,48 @@ self.addEventListener('message', (event) => {
 });
 
 // Push notification handler
+// Payloads are JSON: { title, body, url, tag, actions: [{ action, title, url }] }.
+// Plain-text payloads from older senders still display as a basic notification.
 self.addEventListener('push', (event) => {
+  let payload = {};
+  if (event.data) {
+    try {
+      payload = event.data.json();
+    } catch {
+      payload = { body: event.data.text() };
+    }
+  }
+
+  const actions = Array.isArray(payload.actions) ? payload.actions.slice(0, 2) : [];
   const options = {
-    body: event.data ? event.data.text() : 'New update available',
+    body: payload.body || 'New update available',
     icon: '/icons/icon-192x192.png',
     badge: '/icons/icon-72x72.png',
     vibrate: [200, 100, 200],
+    tag: payload.tag,
     data: {
       dateOfArrival: Date.now(),
-      primaryKey: 1,
+      url: payload.url || '/',
+      actionUrls: Object.fromEntries(actions.map((a) => [a.action, a.url])),
     },
-    actions: [
-      {
-        action: 'explore',
-        title: 'View',
-      },
-      {
-        action: 'close',
-        title: 'Close',
-      },
-    ],
+    actions: actions.length
+      ? actions.map((a) => ({ action: a.action, title: a.title }))
+      : [
+          { action: 'explore', title: 'View' },
+          { action: 'close', title: 'Close' },
+        ],
   };
 
-  event.waitUntil(self.registration.showNotification('FarmCredit', options));
+  event.waitUntil(self.registration.showNotification(payload.title || 'FarmCredit', options));
 });
 
 // Notification click handler
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  if (event.action === 'close') return;
 
-  if (event.action === 'explore') {
-    event.waitUntil(clients.openWindow('/'));
-  }
+  const data = event.notification.data || {};
+  const target =
+    (event.action && data.actionUrls && data.actionUrls[event.action]) || data.url || '/';
+  event.waitUntil(clients.openWindow(target));
 });

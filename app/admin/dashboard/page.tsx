@@ -21,9 +21,11 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
+
 function formatCount(value: number): string {
   return new Intl.NumberFormat('en-US').format(value);
 }
+
 
 function formatRelativeTime(timestamp: string): string {
   const now = Date.now();

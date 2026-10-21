@@ -4,6 +4,7 @@ import type { BuyerComplianceReport } from '@/lib/esg-reporting-v2';
 
 interface ReportHeaderProps {
   report: BuyerComplianceReport;
+  
 }
 
 export function ReportHeader({ report }: ReportHeaderProps) {

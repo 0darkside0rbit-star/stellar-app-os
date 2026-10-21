@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { Trees, SlidersHorizontal, Map as MapIcon } from 'lucide-react';
 import { PlantingLocationsExplorer } from '@/components/organisms/PlantingMap/PlantingLocationsExplorer';
+import { WaitlistZoneList } from '@/components/organisms/PlantingMap/WaitlistZoneList';
 
 export const metadata: Metadata = {
   title: 'Planting Locations — Stellar Farm Credit',
@@ -54,6 +55,21 @@ export default function PlantingLocationsPage() {
         <Suspense fallback={<LoadingSkeleton />}>
           <PlantingLocationsExplorer />
         </Suspense>
+
+        <section className="mt-6" aria-labelledby="waitlist-heading">
+          <div className="mb-3 space-y-1">
+            <h2 id="waitlist-heading" className="text-lg font-semibold tracking-tight">
+              Fully sponsored zones
+            </h2>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              These planting zones have reached capacity. Join the waitlist and we&apos;ll
+              automatically assign you a tree when the next planting batch opens.
+            </p>
+          </div>
+          <Suspense fallback={<LoadingSkeleton />}>
+            <WaitlistZoneList />
+          </Suspense>
+        </section>
       </div>
     </div>
   );

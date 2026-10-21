@@ -13,6 +13,47 @@ export interface SponsorProfile {
   badges: SponsorBadge[];
 }
 
+export interface AnnualImpactSummary {
+  sponsorId: string;
+  year: number;
+  treesFunded: number;
+  co2Absorbed: number;
+  speciesDiversity: number;
+  milestonesReached: string[];
+}
+
+export interface AnnualImpactEmailRow {
+  sponsorId: string;
+  year: number;
+  status: 'pending' | 'sent' | 'failed';
+}
+
+export interface WaitlistEntry {
+  sponsorId: string;
+  region: string;
+  treeId?: string;
+  position: number;
+  joinedAt: string;
+}
+
+export interface WaitlistAssignment {
+  sponsorId: string;
+  region: string;
+  treeId: string;
+  assignedAt: string;
+}
+
+const ANNUAL_IMPACT_EMAILS_ENDPOINT = '/api/sponsors/annual-impact-emails';
+const WAITLIST_ENDPOINT = '/api/sponsors/waitlist';
+
+// In-memory fallback stores used when the API is unavailable (e.g. tests / offline).
+const annualImpactEmailsStore: AnnualImpactEmailRow[] = [];
+const waitlistStore: WaitlistEntry[] = [];
+
+function normalizeAddress(address: string): string {
+  return address.toLowerCase();
+}
+
 export function getSponsorProfile(address: string): SponsorProfile | undefined {
   const sponsor = mockAllTimeSponsors.find(
     (entry) => entry.address.toLowerCase() === address.toLowerCase()

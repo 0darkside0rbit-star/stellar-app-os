@@ -3,6 +3,7 @@
 import React from 'react';
 import type { SponsorshipMilestones } from '@/lib/types/sponsor-badge';
 import { getAchievementBadgeProgress } from '@/lib/gamification/achievement-badges';
+import { dispatchPushNotification } from '@/lib/notifications/push-notifications';
 
 interface AchievementBadgesCardProps {
   milestones?: SponsorshipMilestones;
@@ -17,6 +18,37 @@ export function AchievementBadgesCard({
 }: AchievementBadgesCardProps) {
   const badgeProgress = getAchievementBadgeProgress(milestones);
   const unlockedCount = badgeProgress.filter((b) => b.isUnlocked).length;
+
+  // Track previously unlocked badge ids so we only notify for new unlocks.
+  const previousUnlockedIdsRef = useRef<Set<string> | null>(null);
+
+  useEffect(() => {
+    const currentUnlockedIds = new Set(
+      badgeProgress.filter((b) => b.isUnlocked).map((b) => b.badge.id)
+    );
+
+    // Skip the initial render: we only want to notify about newly unlocked badges.
+    if (previousUnlockedIdsRef.current === null) {
+      previousUnlockedIdsRef.current = currentUnlockedIds;
+      return;
+    }
+
+    const previousUnlockedIds = previousUnlockedIdsRef.current;
+    const newlyUnlocked = badgeProgress.filter(
+      (b) => b.isUnlocked && !previousUnlockedIds.has(b.badge.id)
+    );
+
+    newlyUnlocked.forEach(({ badge }) => {
+      dispatchPushNotification({
+        type: 'achievement_unlocked',
+        title: 'Achievement Unlocked! 🏆',
+        body: `${badge.icon} ${badge.name}: ${badge.unlockedMessage}`,
+        data: { badgeId: badge.id },
+      });
+    });
+
+    previousUnlockedIdsRef.current = currentUnlockedIds;
+  }, [badgeProgress]);
 
   return (
     <div className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-6">

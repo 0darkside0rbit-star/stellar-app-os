@@ -20,6 +20,14 @@ interface OwnershipRecord {
   timestamp: string;
 }
 
+interface TreeAgeMilestone {
+  treeOrBatchId: string;
+  plantedAt: string;
+  ageInDays: number;
+  nextMilestone: string | null;
+  badges: string[];
+}
+
 export default function SponsorReviewsPage() {
   const params = useParams();
   const sponsorId = params.sponsorId as string;
@@ -39,6 +47,9 @@ export default function SponsorReviewsPage() {
   const [treeOrBatchId, setTreeOrBatchId] = useState('');
   const [transferring, setTransferring] = useState(false);
   const [transferError, setTransferError] = useState<string | null>(null);
+  const [treeAges, setTreeAges] = useState<TreeAgeMilestone[]>([]);
+  const [ageLoading, setAgeLoading] = useState(false);
+  const [ageError, setAgeError] = useState<string | null>(null);
 
   const fetchReviews = useCallback(async () => {
     try {
@@ -59,6 +70,22 @@ export default function SponsorReviewsPage() {
   useEffect(() => {
     void fetchReviews();
   }, [fetchReviews]);
+
+  const fetchTreeAges = async () => {
+    try {
+      setAgeLoading(true);
+      setAgeError(null);
+      const response = await fetch(`/api/trees/age?sponsorId=${encodeURIComponent(sponsorId)}`);
+      if (!response.ok) throw new Error('Failed to fetch tree ages');
+      const data = await response.json();
+      setTreeAges(data.trees ?? []);
+    } catch (error) {
+      console.error('Error fetching tree ages:', error);
+      setAgeError('Unable to load tree age milestones.');
+    } finally {
+      setAgeLoading(false);
+    }
+  };
 
   const fetchOwnershipHistory = async () => {
     try {
@@ -132,6 +159,7 @@ export default function SponsorReviewsPage() {
 
       setShowForm(false);
       await fetchReviews();
+      await fetchTreeAges();
     } catch (error) {
       console.error('Error submitting review:', error);
       alert('Failed to submit review. Please try again');
@@ -161,6 +189,12 @@ export default function SponsorReviewsPage() {
       </div>
 
       <div className="flex justify-end gap-3 flex-wrap">
+        <button
+          onClick={fetchTreeAges}
+          className="px-4 py-2 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+        >
+          {ageLoading ? 'Loading Ages...' : 'Refresh Tree Ages'}
+        </button>
         <button
           onClick={handleToggleHistory}
           className="px-4 py-2 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
@@ -243,8 +277,8 @@ export default function SponsorReviewsPage() {
                       <td className="py-2 capitalize">{record.eventType}</td>
                       <td className="py-2 font-mono text-xs">{record.treeOrBatchId}</td>
                       <td className="py-2 font-mono text-xs">{record.fromUserId ?? '—'}</td>
-                      <td className="py-2 font-mono texe-xs">{record.toUserId}</td>
-                      <td className="py-2 font-mono texe-xs">
+                      <td className="py-2 font-mono text-xs">{record.toUserId}</td>
+                      <td className="py-2 font-mono text-xs">
                         <a
                           className="text-green-700 hover:underline"
                           href={`https://stellar.org/explorer/tx/${record.transactionHash}`}
@@ -302,6 +336,38 @@ export default function SponsorReviewsPage() {
         </section>
       )}
 
+      {ageError && <p className="text-sm text-red-600">{ageError}</p>}
+
+      {treeAges.length > 0 && (
+        <section className="rounded-lg border border-gray-200 bg-white p-6 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900">Tree Age & Milestones</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {treeAges.map((tree) => (
+              <div key={tree.treeOrBatchId} className="rounded-md border border-gray-100 p-4">
+                <p className="font-mono text-xs text-gray-500">{tree.treeOrBatchId}</p>
+                <p className="text-sm text-gray-700">
+                  Age: {tree.ageInDays} days (planted{' '}
+                  {new Date(tree.plantedAt).toLocaleDateString()})
+                </p>
+                {tree.nextMilestone && (
+                  <p className="text-sm text-green-700">Next milestone: {tree.nextMilestone}</p>
+                )}
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {tree.badges.map((badge) => (
+                    <span
+                      key={badge}
+                      className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800"
+                    >
+                      {badge}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {showComparison && <ProjectComparisonTool />}
 
       {showProjectSearch && <ProjectComparisonTool />}
@@ -320,6 +386,9 @@ export default function SponsorReviewsPage() {
       )}
 
       <div className="space-y-4">
+        {treeAges.length === 0 && !ageLoading && (
+          <p className="text-sm text-gray-500">No tree age data available yet.</p>
+        )}
         {reviews.length === 0 ? (
           <p className="text-center text-gray-500 py-8">No reviews yet. Be the first to review!</p>
         ) : (

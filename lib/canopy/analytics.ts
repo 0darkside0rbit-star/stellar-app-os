@@ -124,7 +124,9 @@ export function filterBySource(
   return source === 'all' ? surveys : surveys.filter((s) => s.source === source);
 }
 
-export function coveragePercent(survey: CanopySurvey): number {
+export function coveragePercent(
+  survey: Pick<CanopySurvey, 'projectAreaHa' | 'canopyAreaHa'>
+): number {
   if (survey.projectAreaHa <= 0) return 0;
   return round((survey.canopyAreaHa / survey.projectAreaHa) * 100);
 }

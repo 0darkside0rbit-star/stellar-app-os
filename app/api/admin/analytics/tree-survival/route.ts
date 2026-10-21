@@ -16,6 +16,16 @@ import {
 } from '@/lib/analytics/farmer-income';
 import '@/lib/analytics/compliance-report';
 import { searchOffsetProjects, parseOffsetProjectSearchParams } from '@/lib/offset/project-search';
+import {
+  getTreeAge,
+  parseTreeAgeInput,
+  parseTreeMilestoneInput,
+  processTreeMilestones,
+} from '@/lib/analytics/tree-age';
+import {
+  getCorporateEsgImpact,
+  parseCorporateEsgImpactFilters,
+} from '@/lib/analytics/corporate-esg-impact';
 
 export const runtime = 'nodejs';
 
@@ -39,6 +49,60 @@ export async function GET(request: Request): Promise<NextResponse> {
     const message = error instanceof Error ? error.message : 'Failed to generate tree analytics';
     const status = /must be|valid ISO|before or equal/.test(message) ? 400 : 500;
     console.error('[tree-survival-analytics]', error);
+    return NextResponse.json({ error: message }, { status });
+  }
+}
+
+/**
+ * GET /api/admin/analytics/tree-survival/age
+ *
+ * Calculates a tree's age from its planting date and returns the current
+ * growth milestone badge along with the next upcoming milestone.
+ */
+export async function GET_TREE_AGE(request: Request): Promise<NextResponse> {
+  if (!(await isAdminRequest())) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  try {
+    const input = parseTreeAgeInput(new URL(request.url).searchParams);
+    const age = getTreeAge(input);
+    return NextResponse.json(age, {
+      headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=300' },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to calculate tree age';
+    const status = /must be|required|invalid|before or equal|future/.test(message) ? 400 : 500;
+    console.error('[tree-age]', error);
+    return NextResponse.json({ error: message }, { status });
+  }
+}
+
+/**
+ * GET /api/admin/analytics/tree-survival/corporate-impact
+ *
+ * Returns the corporate ESG impact dashboard for a sponsor account: trees
+ * funded, CO2 sequestered, biodiversity contribution, and employee engagement,
+ * aligned to ESG reporting frameworks (GRI, SASB, CDP, TSFD, SEBi).
+ */
+export async function GET_CORPORATE_IMPACT(request: Request): Promise<NextResponse> {
+  if (!(await isAdminRequest())) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  try {
+    const filters = parseCorporateEsgImpactFilters(new URL(request.url).searchParams);
+    const report = await getCorporateEsgImpact(getReadPool(), filters);
+    return NextResponse.json(report, {
+      headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=300' },
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to generate corporate ESG impact';
+    const status = /must be|required|invalid|unsupported|non-negative|unknown|before or equal/.test(
+      message
+    )
+      ? 400
+      : 500;
+    console.error('[corporate-esg-impact]', error);
     return NextResponse.json({ error: message }, { status });
   }
 }
@@ -69,7 +133,7 @@ export async function GET_PAYMENT_METHODS(request: Request): Promise<NextRespons
 }
 
 /**
- * PUT /api/admin/analytics/tree-survival
+ * PU /api/admin/analytics/tree-survival
  *
  * Processes a farmer payment in XLM, USDC, or fiat currency via bank transfer,
  * crypto wallet, or payment app.
@@ -115,6 +179,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: message }, { status });
   }
 }
+
 /**
  * PATCH /api/admin/analytics/tree-survival
  *
@@ -162,6 +227,33 @@ export async function DELETE(request: Request): Promise<NextResponse> {
       ? 400
       : 500;
     console.error('[offset-project-search]', error);
+    return NextResponse.json({ error: message }, { status });
+  }
+}
+
+/**
+ * POST /api/admin/analytics/tree-survival/milestones
+ *
+ * Detects newly reached growth milestones (1 month, 6 months, 1 year, 5 years)
+ * for trees, persists digital milestone badges on the tree profile, and sends
+ * milestone notification emails to the sponsor.
+ */
+export async function POST_MILESTONES(request: Request): Promise<NextResponse> {
+  if (!(await isAdminRequest())) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  try {
+    const input = parseTreeMilestoneInput(await request.json());
+    const result = await processTreeMilestones(getPool(), input);
+    return NextResponse.json(result, {
+      headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=300' },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to process tree milestones';
+    const status = /must be|required|invalid|unsupported|non-negative|not found/.test(message)
+      ? 400
+      : 500;
+    console.error('[tree-milestones]', error);
     return NextResponse.json({ error: message }, { status });
   }
 }

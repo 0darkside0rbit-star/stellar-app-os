@@ -1,10 +1,18 @@
 import { NextResponse } from 'next/server';
-import { sendWeeklySponsorDigest, type WeeklySponsorDigestParams } from '@/lib/email/sendgrid';
+import {
+  sendWeeklySponsorDigest,
+  sendTreeMilestoneEmail,
+  type WeeklySponsorDigestParams,
+  type TreeMilestoneEmailParams,
+} from '@/lib/email/sendgrid';
 import { auditLog } from '@/lib/audit';
 import { processFarmerPayment, type FarmerPaymentRequest } from '@/lib/payments/farmer';
+import { calculateTreeAge, getTreeMilestones, type TreeMilestone } from '@/lib/tree/age';
+import { addMilestoneBadge } from '@/lib/tree/badges';
+import { getTreeById } from '@/lib/tree/repository';
 
 const SUPPORTED_CURRENCIES = ['XLM', 'USDC', 'FIAT'] as const;
-const SUPPORTED_METHODS = ['banc_transfer', 'crypto_wallet', 'payment_app'] as const;
+const SUPPORTED_METHODS = ['bank_transfer', 'crypto_wallet', 'payment_app'] as const;
 
 export const runtime = 'nodejs';
 
@@ -13,6 +21,8 @@ export async function POST(request: Request) {
     const body = (await request.json()) as {
       digests?: WeeklySponsorDigestParams[];
       payments?: FarmerPaymentRequest[];
+      treeId?: string;
+      milestones?: TreeMilestoneEmailParams[];
     };
     if (Array.isArray(body.payments)) {
       const results = [];
@@ -57,6 +67,80 @@ export async function POST(request: Request) {
         details: { count: results.length },
       });
       return NextResponse.json({ processed: results.length, results });
+    }
+    if (Array.isArray(body.milestones)) {
+      const sent: TreeMilestone[] = [];
+      for (const milestone of body.milestones) {
+        if (!milestone.treeId || !milestone.sponsorEmail || !milestone.sponsorName) {
+          await auditLog({
+            action: 'ADMIN_TREE_MILESTONE_INVALID',
+            details: { error: 'missing required fields', treeId: milestone.treeId },
+          });
+          return NextResponse.json(
+            { error: 'each milestone requires treeId, sponsorEmail, and sponsorName' },
+            { status: 400 }
+          );
+        }
+        const tree = await getTreeById(milestone.treeId);
+        if (!tree) {
+          await auditLog({
+            action: 'ADMIN_TREE_MILESTONE_INVALID',
+            details: { error: 'tree not found', treeId: milestone.treeId },
+          });
+          return NextResponse.json(
+            { error: `tree not found: ${milestone.treeId}` },
+            { status: 404 }
+          );
+        }
+        const age = calculateTreeAge(tree.plantedDate);
+        const reached = getTreeMilestones(age);
+        const target = milestone.milestone;
+        if (!reached.includes(target)) {
+          await auditLog({
+            action: 'ADMIN_TREE_MILESTONE_INVALID',
+            details: {
+              error: 'milestone not reached',
+              treeId: milestone.treeId,
+              milestone: target,
+            },
+          });
+          return NextResponse.json(
+            { error: `milestone ${target} not reached for tree ${milestone.treeId}` },
+            { status: 400 }
+          );
+        }
+        await sendTreeMilestoneEmail({
+          treeId: milestone.treeId,
+          treeName: milestone.treeName ?? tree.name,
+          sponsorEmail: milestone.sponsorEmail,
+          sponsorName: milestone.sponsorName,
+          milestone: target,
+          ageLabel: age.label,
+          plantedDate: tree.plantedDate,
+        });
+        await addMilestoneBadge(tree, target);
+        sent.push(target);
+      }
+      await auditLog({ action: 'ADMIN_TREE_MILESTONE_SUCCESS', details: { count: sent.length } });
+      return NextResponse.json({ sent: sent.length, milestones: sent });
+    }
+    if (body.treeId) {
+      const tree = await getTreeById(body.treeId);
+      if (!tree) {
+        await auditLog({
+          action: 'ADMIN_TREE_AGE_INVALID',
+          details: { error: 'tree not found', treeId: body.treeId },
+        });
+        return NextResponse.json({ error: `tree not found: ${body.treeId}` }, { status: 404 });
+      }
+      const age = calculateTreeAge(tree.plantedDate);
+      const reached = getTreeMilestones(age);
+      return NextResponse.json({
+        treeId: tree.id,
+        age,
+        milestones: reached,
+        badges: tree.milestoneBadges ?? [],
+      });
     }
     if (!Array.isArray(body.digests)) {
       await auditLog({

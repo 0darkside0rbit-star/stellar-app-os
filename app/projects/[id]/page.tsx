@@ -4,8 +4,10 @@ import { notFound } from 'next/navigation';
 
 import { ProjectDetailView } from '@/components/organisms/ProjectDetailView/ProjectDetailView';
 import { ForestRegenerationSimulation } from '@/components/organisms/ForestRegenerationSimulation/ForestRegenerationSimulation';
+import { ForestProtectionZone } from '@/components/organisms/ForestProtectionZone/ForestProtectionZone';
 import { mockAdminProjectDetails } from '@/lib/api/mock/adminProjectDetails';
 import { mockCarbonProjects } from '@/lib/api/mock/carbonProjects';
+import { getMockProjectCoverage } from '@/lib/api/mock/projectCoverage';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -85,12 +87,24 @@ export default async function ProjectPage({ params }: Props) {
         </div>
       )}
 
-      <ProjectDetailView adminProject={adminProject} carbonProject={carbonProject} />
-
-      <ForestRegenerationSimulation
-        species={adminProject.primarySpecies}
-        climateZone={adminProject.climateZone}
+      <ProjectDetailView
+        adminProject={adminProject}
+        carbonProject={carbonProject}
+        coverage={getMockProjectCoverage(adminProject.id)}
       />
+
+      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6">
+        <ForestRegenerationSimulation
+          species={adminProject.primarySpecies ?? 'Mixed Native Species'}
+          climateZone={adminProject.climateZone ?? 'Tropical'}
+        />
+
+        {bufferZone && (
+          <ForestProtectionZone
+            bufferZone={bufferZone}
+          />
+        )}
+      </div>
     </>
   );
 }

@@ -6,27 +6,7 @@ export type NotificationType =
   | 'warning'
   | 'error'
   | 'success'
-  | 'tree_planted'
-  | 'tree_survival_1y'
-  | 'tree_milestone_5y'
-  | 'achievement_unlocked';
-
-export type TreeLifecycleEventType =
-  | 'tree_planted'
-  | 'tree_survival_1y'
-  | 'tree_milestone_5y'
-  | 'achievement_unlocked';
-
-export interface TreeLifecycleNotificationEvent {
-  treeId: string;
-  sponsorAddress: string;
-  eventType: TreeLifecycleEventType;
-  milestoneYears?: number;
-  achievementId?: string;
-  title: string;
-  body: string;
-  data?: Record<string, unknown>;
-}
+  | 'newsletter';
 
 export type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent';
 
@@ -63,6 +43,8 @@ export interface NotificationState {
   toasts: ToastNotification[];
   unreadCount: number;
   isDrawerOpen: boolean;
+  /** Whether the sponsor has opted in to the monthly forest health newsletter. */
+  newsletterOptIn: boolean;
 }
 
 export interface NotificationActions {
@@ -80,6 +62,10 @@ export interface NotificationActions {
   toggleDrawer: () => void;
   clearAll: () => void;
   clearRead: () => void;
+  /** Update and persist the sponsor's newsletter subscription preference. */
+  setNewsletterOptIn: (optIn: boolean) => void;
+  /** Toggle the sponsor's newsletter subscription preference. */
+  toggleNewsletterOptIn: () => void;
 }
 
 export type NotificationContextValue = NotificationState & NotificationActions;

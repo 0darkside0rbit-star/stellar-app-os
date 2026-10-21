@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 
 import { ProjectDetailView } from '@/components/organisms/ProjectDetailView/ProjectDetailView';
 import { ForestRegenerationSimulation } from '@/components/organisms/ForestRegenerationSimulation/ForestRegenerationSimulation';
+import { ForestProtectionZone } from '@/components/organisms/ForestProtectionZone/ForestProtectionZone';
 import { mockAdminProjectDetails } from '@/lib/api/mock/adminProjectDetails';
 import { mockCarbonProjects } from '@/lib/api/mock/carbonProjects';
 import { getMockProjectCoverage } from '@/lib/api/mock/projectCoverage';
@@ -92,10 +93,18 @@ export default async function ProjectPage({ params }: Props) {
         coverage={getMockProjectCoverage(adminProject.id)}
       />
 
-      <ForestRegenerationSimulation
-        species={adminProject.primarySpecies}
-        climateZone={adminProject.climateZone}
-      />
+      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6">
+        <ForestRegenerationSimulation
+          species={adminProject.primarySpecies ?? 'Mixed Native Species'}
+          climateZone={adminProject.climateZone ?? 'Tropical'}
+        />
+
+        {bufferZone && (
+          <ForestProtectionZone
+            bufferZone={bufferZone}
+          />
+        )}
+      </div>
     </>
   );
 }

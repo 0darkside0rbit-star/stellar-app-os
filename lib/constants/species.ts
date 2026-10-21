@@ -64,7 +64,7 @@ function buildGrowthCurve(
   };
 }
 
-const CLIMATE_FACTORS: Record<ClimateZone, number> = {
+export const CLIMATE_FACTORS: Record<ClimateZone, number> = {
   tropical: 1.0,
   subtropical: 0.9,
   temperate: 0.8,

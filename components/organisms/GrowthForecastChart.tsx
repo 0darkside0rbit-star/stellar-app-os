@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { ChartNoAxesCombined, LoaderCircle } from 'lucide-react';
 import { Text } from '@/components/atoms/Text';
+import { Co2MethodologyLink } from '@/components/molecules/Co2MethodologyLink';
 import type { Tree } from '@/lib/types/tree';
 import type { GrowthProjection } from '@/lib/growth/growthTypes';
 
@@ -77,9 +78,12 @@ export function GrowthForecastChart({ tree }: GrowthForecastChartProps) {
           <ChartNoAxesCombined className="h-4 w-4 text-stellar-green" aria-hidden />
           <Text className="text-xs font-bold">Growth forecast</Text>
         </div>
-        <Text variant="muted" className="text-[10px]">
-          Projected CO₂ / year
-        </Text>
+        <div className="flex flex-col items-end gap-0.5">
+          <Text variant="muted" className="text-[10px]">
+            Projected CO₂ / year
+          </Text>
+          <Co2MethodologyLink className="text-[10px]" />
+        </div>
       </div>
 
       {isLoading && (

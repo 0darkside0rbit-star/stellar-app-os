@@ -27,6 +27,8 @@ export interface Tree {
   lat: number;
   lng: number;
   co2OffsetKgPerYear: number;
+  /** Climate zone used for CO₂ estimates; inferred from latitude when absent. */
+  climateZone?: 'tropical' | 'subtropical' | 'temperate' | 'arid' | 'coastal';
   projectName: string;
   /** On-chain collectible ID and current owner for sponsored trees. */
   nftTokenId?: string;

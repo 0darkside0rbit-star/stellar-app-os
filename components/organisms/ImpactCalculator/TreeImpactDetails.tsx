@@ -6,6 +6,7 @@ import { Select } from '@/components/atoms/Select';
 import { Input } from '@/components/atoms/Input';
 import { Text } from '@/components/atoms/Text';
 import { Badge } from '@/components/atoms/Badge';
+import { Co2MethodologyLink } from '@/components/molecules/Co2MethodologyLink';
 import { cn } from '@/lib/utils';
 import { type TreeSpecies } from '@/lib/types/tree-impact';
 import {
@@ -263,6 +264,10 @@ export function TreeImpactDetails({
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="px-6 pt-3">
+        <Co2MethodologyLink />
       </div>
 
       {/* Metric cards */}

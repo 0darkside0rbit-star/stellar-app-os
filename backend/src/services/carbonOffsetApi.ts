@@ -76,6 +76,7 @@ export interface EmbedScriptConfig {
 /**
  * Validate API key and return embed config
  */
+
 export async function validateApiKey(apiKey: string): Promise<EmbedConfig | null> {
   const { data, error } = await supabase
     .from('embed_api_keys')

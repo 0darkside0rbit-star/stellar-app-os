@@ -136,6 +136,18 @@ export function getCampaign(slug: string): Campaign | undefined {
   return CAMPAIGNS.find((c) => c.slug === slug);
 }
 
+/** Resolve a campaign by its charity partner code (case-insensitive). */
+export function getCampaignByCharityCode(code: string): Campaign | undefined {
+  const normalized = code.trim().toLowerCase();
+  if (!normalized) return undefined;
+  return CAMPAIGNS.find((c) => c.charityCode?.toLowerCase() === normalized);
+}
+
+/** All campaigns that have a charity partner attached. */
+export function getCharityCampaigns(): Campaign[] {
+  return CAMPAIGNS.filter((c) => Boolean(c.charityCode));
+}
+
 /** Matched funding contributed by corporate sponsors for the current donations. */
 export function getMatchedAmount(campaign: Campaign): number {
   const raw = campaign.raisedUsd * (campaign.matchMultiplier - 1);

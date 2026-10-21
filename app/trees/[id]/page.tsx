@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowRight, Smartphone } from 'lucide-react';
 import { TreeDetail } from '@/components/organisms/TreeDetail/TreeDetail';
+import { ConnectedTreeMessagePanel } from '@/components/organisms/TreeMessagePanel/ConnectedTreeMessagePanel';
 import { getMockTrees } from '@/lib/api/mock/trees';
 import { getTreeById } from '@/lib/api/tree-registry';
 import { estimateTreeSequestration, inferClimateZone } from '@/lib/carbon/ipcc-tier1';
@@ -75,6 +76,11 @@ export default async function TreeDetailPage({ params }: { params: Promise<{ id:
   return (
     <>
       <TreeDetail tree={tree} sequestration={sequestration} />
+
+      {/* Sponsor ↔ field team messaging (Issue #1686) */}
+      <div className="mx-auto max-w-3xl px-4 pb-6">
+        <ConnectedTreeMessagePanel treeId={tree.id} />
+      </div>
 
       {/* WebAR 20-year growth view (Issue #1106) */}
       <div className="mx-auto -mt-4 max-w-3xl px-4 pb-10 sm:pb-12">

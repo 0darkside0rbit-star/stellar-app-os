@@ -30,13 +30,11 @@ export default function PlantingLocationsPage() {
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-stellar-green">
                 <Trees className="size-5 text-white" aria-hidden="true" />
               </div>
-              <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
-                Planting Locations
-              </h1>
+              <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Planting Locations</h1>
             </div>
             <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-              Explore our global network of verified tree-planting sites. Filter by region,
-              climate, or species, then sponsor trees in the location that matters most to you.
+              Explore our global network of verified tree-planting sites. Filter by region, climate,
+              or species, then sponsor trees in the location that matters most to you.
             </p>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">

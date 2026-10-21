@@ -36,12 +36,24 @@ import { ForestCoverageTracker } from '@/components/organisms/ForestCoverageTrac
 import { ProjectPlanters } from '@/components/organisms/ProjectPlanters';
 import { FundAllocationTransparency } from '@/components/organisms/FundAllocationTransparency';
 import { NativeSpeciesTransparency } from '@/components/organisms/NativeSpeciesTransparency';
+import dynamic from 'next/dynamic';
+import '@/components/organisms/PlantingMethods/PlantingMethods';
+import '@/components/organisms/RestorationTimeline/RestorationTimelineGantt';
+import '@/components/organisms/LivePlantingStream/LivePlantingStream';
 
 import { mockCarbonProjects } from '@/lib/api/mock/carbonProjects';
 import { toast } from 'sonner';
 import type { AdminProjectDetail } from '@/lib/types/adminProject';
 import type { CarbonProject } from '@/lib/types/carbon';
 import type { ProjectCoverageRecord } from '@/lib/canopy/project-coverage';
+
+const ProjectProtectionImpact = dynamic(
+  () =>
+    import('@/components/organisms/SponsorImpact/ProjectProtectionImpact').then(
+      (module) => module.ProjectProtectionImpact
+    ),
+  { ssr: false }
+);
 
 interface ProjectDetailViewProps {
   adminProject: AdminProjectDetail;
@@ -361,7 +373,7 @@ export function ProjectDetailView({
                       <div>
                         <div className="text-sm font-medium line-clamp-1">{doc.fileName}</div>
                         <div className="text-xs text-muted-foreground">
-                          {(doc.sizeBytes / 1024 / 1024).toFixed(2)} MB • {doc.version}
+                          {(doc.sizeBytes / 1024 / 1024).toFixed(2)} MB â€¢ {doc.version}
                         </div>
                       </div>
                     </div>

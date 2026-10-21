@@ -10,9 +10,5 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
   await requireAdminAccess();
   await requireCorporateAccount();
 
-  return (
-    <>
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }

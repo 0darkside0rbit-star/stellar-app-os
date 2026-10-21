@@ -19,12 +19,8 @@ function getDaysRemaining(deadline: string | Date): number {
 }
 
 export default function CampaignsPage() {
-  const endangeredCampaigns = CAMPAIGNS.filter(
-    (c) => c.isEndangeredBiome ?? false
-  );
-  const otherCampaigns = CAMPAIGNS.filter(
-    (c) => !(c.isEndangeredBiome ?? false)
-  );
+  const endangeredCampaigns = CAMPAIGNS.filter((c) => c.isEndangeredBiome ?? false);
+  const otherCampaigns = CAMPAIGNS.filter((c) => !(c.isEndangeredBiome ?? false));
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-10">
@@ -63,17 +59,11 @@ export default function CampaignsPage() {
                     <Progress value={getProgressPercent(c)} />
                     <p className="text-sm">{getProgressPercent(c)}% funded</p>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Match remaining
-                      </span>
-                      <span className="font-medium">
-                        ${remainingMatch.toLocaleString()}
-                      </span>
+                      <span className="text-muted-foreground">Match remaining</span>
+                      <span className="font-medium">${remainingMatch.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {daysRemaining} days left
-                      </span>
+                      <span className="text-muted-foreground">{daysRemaining} days left</span>
                       <span className="font-medium">
                         {treesRemaining.toLocaleString()} trees to go
                       </span>

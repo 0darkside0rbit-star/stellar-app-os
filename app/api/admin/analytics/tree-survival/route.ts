@@ -5,19 +5,27 @@ import { isAdminRequest } from '@/lib/auth/admin';
 import { getTreeAnalytics, parseTreeAnalyticsFilters } from '@/lib/analytics/tree-survival';
 import { getCarbonOffsetEstimate, parseCarbonOffsetInput } from '@/lib/analytics/carbon-offset';
 import { processFarmerPayment, parseFarmerPaymentInput } from '@/lib/payments/farmer-payment';
-import { getFarmerPaymentMethods, parseFarmerPaymentMethodFilters } from '@/lib/payments/farmer-payment-methods';
-import { getProjectComparison, parseProjectComparisonInput } from '@/lib/analytics/project-comparison';
-import { getFarmerIncomePrediction, parseFarmerIncomePredictionInput } from '@/lib/analytics/farmer-income';
-import { getComplianceReport, parseComplianceReportInput } from '@/lib/analytics/compliance-report';
+import {
+  getFarmerPaymentMethods,
+  parseFarmerPaymentMethodFilters,
+} from '@/lib/payments/farmer-payment-methods';
+import '@/lib/analytics/project-comparison';
+import {
+  getFarmerIncomePrediction,
+  parseFarmerIncomePredictionInput,
+} from '@/lib/analytics/farmer-income';
+import '@/lib/analytics/compliance-report';
 import { searchOffsetProjects, parseOffsetProjectSearchParams } from '@/lib/offset/project-search';
 import {
   getTreeAge,
   parseTreeAgeInput,
-  getTreeMilestones,
   parseTreeMilestoneInput,
   processTreeMilestones,
 } from '@/lib/analytics/tree-age';
-import { getCorporateEsgImpact, parseCorporateEsgImpactFilters } from '@/lib/analytics/corporate-esg-impact';
+import {
+  getCorporateEsgImpact,
+  parseCorporateEsgImpactFilters,
+} from '@/lib/analytics/corporate-esg-impact';
 
 export const runtime = 'nodejs';
 
@@ -87,8 +95,13 @@ export async function GET_CORPORATE_IMPACT(request: Request): Promise<NextRespon
       headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=300' },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to generate corporate ESG impact';
-    const status = /must be|required|invalid|unsupported|non-negative|unknown|before or equal/.test(message) ? 400 : 500;
+    const message =
+      error instanceof Error ? error.message : 'Failed to generate corporate ESG impact';
+    const status = /must be|required|invalid|unsupported|non-negative|unknown|before or equal/.test(
+      message
+    )
+      ? 400
+      : 500;
     console.error('[corporate-esg-impact]', error);
     return NextResponse.json({ error: message }, { status });
   }
@@ -111,7 +124,8 @@ export async function GET_PAYMENT_METHODS(request: Request): Promise<NextRespons
       headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=300' },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to load farmer payment methods';
+    const message =
+      error instanceof Error ? error.message : 'Failed to load farmer payment methods';
     const status = /must be|required|invalid|unsupported|non-negative/.test(message) ? 400 : 500;
     console.error('[farmer-payment-methods]', error);
     return NextResponse.json({ error: message }, { status });
@@ -209,7 +223,9 @@ export async function DELETE(request: Request): Promise<NextResponse> {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to search offset projects';
-    const status = /must be|required|invalid|unsupported|non-negative|unknown/.test(message) ? 400 : 500;
+    const status = /must be|required|invalid|unsupported|non-negative|unknown/.test(message)
+      ? 400
+      : 500;
     console.error('[offset-project-search]', error);
     return NextResponse.json({ error: message }, { status });
   }
@@ -234,7 +250,9 @@ export async function POST_MILESTONES(request: Request): Promise<NextResponse> {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to process tree milestones';
-    const status = /must be|required|invalid|unsupported|non-negative|not found/.test(message) ? 400 : 500;
+    const status = /must be|required|invalid|unsupported|non-negative|not found/.test(message)
+      ? 400
+      : 500;
     console.error('[tree-milestones]', error);
     return NextResponse.json({ error: message }, { status });
   }
